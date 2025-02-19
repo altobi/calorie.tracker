@@ -257,6 +257,39 @@ class SettingsManager {
         if (importBtn) {
             importBtn.remove();
         }
+
+        // Add to Home Screen functionality
+        const addToHomeBtn = document.getElementById('addToHomeBtn');
+        if (addToHomeBtn) {
+            // Only show on mobile and if the feature is available
+            if (window.matchMedia('(display-mode: browser)').matches && 
+                ('beforeinstallprompt' in window || 
+                 (navigator.standalone === false && /(iPhone|iPod|iPad)/i.test(navigator.userAgent)))) {
+                
+                addToHomeBtn.style.display = 'block';
+                
+                // For Android
+                let deferredPrompt;
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    deferredPrompt = e;
+                });
+                
+                addToHomeBtn.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        // Android
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        deferredPrompt = null;
+                    } else if (/(iPhone|iPod|iPad)/i.test(navigator.userAgent)) {
+                        // iOS
+                        alert('To add to home screen: tap the share button below (rectangle with arrow pointing up) and select "Add to Home Screen"');
+                    }
+                });
+            } else {
+                addToHomeBtn.style.display = 'none';
+            }
+        }
     }
 
     hideSettings() {

@@ -10,6 +10,10 @@ class FoodSelector {
         app.state.selectedFoods = {}; // Initialize selectedFoods state
         this.resetCurrentMeal(); // Add this line
         this.init();
+        
+        // Load saved current meal
+        const savedMeal = localStorage.getItem('currentMeal');
+        window.currentMeal = savedMeal ? JSON.parse(savedMeal) : {};
     }
 
     init() {
@@ -159,19 +163,21 @@ class FoodSelector {
                 <span class="food-item-name">${foodKey}</span>
             </div>
             <div class="amount-control-group">
-                <div class="amount-buttons">
-                    <button data-amount="-10">-10</button>
-                    <button data-amount="-5">-5</button>
-                    <button data-amount="-1">-1</button>
+                <div class="amount-controls">
+                    <div class="amount-buttons">
+                        <button data-amount="-10">-10</button>
+                        <button data-amount="-5">-5</button>
+                        <button data-amount="-1">-1</button>
+                    </div>
+                    <input type="number" value="0" min="0">
+                    <div class="amount-buttons">
+                        <button data-amount="1">+1</button>
+                        <button data-amount="5">+5</button>
+                        <button data-amount="10">+10</button>
+                    </div>
                 </div>
-                <input type="number" value="0" min="0">
-                <div class="amount-buttons">
-                    <button data-amount="1">+1</button>
-                    <button data-amount="5">+5</button>
-                    <button data-amount="10">+10</button>
-                </div>
+                <button class="remove-food-btn">×</button>
             </div>
-            <button class="remove-food-btn">×</button>
         `;
 
         // Add event listeners
@@ -211,12 +217,15 @@ class FoodSelector {
         
         input.value = newAmount;
         
-        // Only store the grams
+        // Store the grams and save to localStorage
         if (newAmount > 0) {
             window.currentMeal[foodKey] = newAmount;
         } else {
             delete window.currentMeal[foodKey];
         }
+
+        // Save current meal to localStorage
+        localStorage.setItem('currentMeal', JSON.stringify(window.currentMeal));
 
         this.updateTotalCalories();
         this.renderCurrentMealSummary();
@@ -772,6 +781,7 @@ class FoodSelector {
 
     resetCurrentMeal() {
         window.currentMeal = {};
+        localStorage.removeItem('currentMeal'); // Clear from storage
         app.state.selectedFoods = {};
         this.updateTotalCalories();
         this.renderCurrentMealSummary();

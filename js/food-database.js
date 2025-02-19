@@ -528,6 +528,13 @@ const defaultFoodData = {
                 fat: 0.9,
                 key: "kale"
             },
+            "Potato": {
+                calories: 93,
+                protein: 2.5,
+                carbs: 21,
+                fat: 0.1,
+                key: "potato"
+            },
             "Sweet Potato": {
                 calories: 86,
                 protein: 1.6,
