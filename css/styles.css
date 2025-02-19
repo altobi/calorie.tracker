@@ -811,14 +811,82 @@ body.modal-open {
     }
 
     body[data-page="settings"] .settings-page {
-        display: block;
+        display: flex;
+        flex-direction: column;
         background: var(--background-color);
-        min-height: 100vh;
+        min-height: calc(100vh - 60px); /* Account for mobile nav */
         padding: var(--spacing-md);
+        padding-bottom: calc(var(--spacing-xl) + 60px); /* Extra padding for mobile nav */
+        overflow-y: auto;
+        position: relative;
     }
 
     .settings-page {
         display: none;
+    }
+
+    /* Ensure footer stays at bottom but is visible */
+    .settings-footer {
+        position: relative;
+        margin-top: var(--spacing-xl);
+        padding: var(--spacing-md);
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+}
+
+/* Fix mobile scrolling issues */
+@media screen and (max-width: 768px) {
+    body {
+        position: relative;
+        min-height: 100vh;
+        padding-bottom: 60px; /* Height of mobile nav */
+    }
+
+    .container {
+        min-height: calc(100vh - 60px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .mobile-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: var(--card-background);
+        border-top: 1px solid var(--border-color);
+        z-index: 1000;
+    }
+}
+
+/* iOS fullscreen fixes - update */
+@media screen and (display-mode: standalone) {
+    body {
+        /* Remove fixed positioning */
+        position: relative;
+        min-height: 100vh;
+        padding-bottom: 60px;
+    }
+    
+    .container {
+        min-height: calc(100vh - 60px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Adjust for iOS safe areas */
+    @supports (padding: max(0px)) {
+        body {
+            padding-bottom: max(60px, env(safe-area-inset-bottom));
+        }
+        
+        .mobile-nav {
+            height: max(60px, env(safe-area-inset-bottom));
+            padding-bottom: env(safe-area-inset-bottom);
+        }
     }
 }
 
@@ -1336,5 +1404,49 @@ body.modal-open {
 @media screen and (max-width: 768px) {
     .mobile-only {
         display: block;
+    }
+}
+
+.settings-footer {
+    margin-top: auto;
+    padding: var(--spacing-md);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.version-info {
+    opacity: 0.7;
+}
+
+/* Ensure settings page can flex to put footer at bottom */
+.settings-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+/* iOS fullscreen fixes */
+@media screen and (display-mode: standalone) {
+    body {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    .container {
+        height: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Hide Safari UI in standalone mode */
+@supports (-webkit-touch-callout: none) {
+    @media screen and (display-mode: standalone) {
+        * {
+            -webkit-touch-callout: none;
+        }
     }
 } 
