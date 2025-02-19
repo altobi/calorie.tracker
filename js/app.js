@@ -26,11 +26,18 @@ function initializeApp() {
 }
 
 function loadSavedState() {
-    // Load selected foods from localStorage
+    // Load selected foods
     const savedFoods = localStorage.getItem('selectedFoods');
     if (savedFoods) {
-        state.selectedFoods = JSON.parse(savedFoods);
-        renderSelectedFoods();
+        try {
+            state.selectedFoods = JSON.parse(savedFoods);
+            // Only call if foodSelector exists
+            if (window.foodSelector && typeof window.foodSelector.renderSelectedFoods === 'function') {
+                foodSelector.renderSelectedFoods();
+            }
+        } catch (e) {
+            console.error('Error loading saved foods:', e);
+        }
     }
 }
 
@@ -45,10 +52,13 @@ function setupEventListeners() {
 
     // Search functionality
     const searchInput = document.getElementById('foodSearch');
-    searchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        filterFoodItems(searchTerm);
-    });
+    if (searchInput) {
+        searchInput.addEventListener('input', utils.debounce((e) => {
+            if (window.foodSelector) {
+                foodSelector.handleSearch(e.target.value);
+            }
+        }, 300));
+    }
 
     // Calorie budget
     document.getElementById('dailyBudget').addEventListener('change', (e) => {
@@ -80,6 +90,31 @@ function setActivePage(page) {
         }
     });
 }
+
+// Add the missing filterFoodItems function
+function filterFoodItems(searchTerm) {
+    if (!window.foodSelector) return [];
+    
+    const term = searchTerm.toLowerCase();
+    const results = [];
+    
+    Object.entries(foodSelector.foodData.categories).forEach(([categoryKey, category]) => {
+        Object.entries(category.items).forEach(([itemKey, item]) => {
+            if (item.name.toLowerCase().includes(term)) {
+                results.push({
+                    ...item,
+                    key: itemKey,
+                    category: categoryKey
+                });
+            }
+        });
+    });
+    
+    return results;
+}
+
+// Make it globally available
+window.filterFoodItems = filterFoodItems;
 
 // Export state and functions for other modules
 window.app = {

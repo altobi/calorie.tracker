@@ -3,19 +3,32 @@ class FoodSelector {
     constructor() {
         this.foodData = defaultFoodData;
         this.selectedCategory = null;
-        // Wait for DOM to be ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.init());
-        } else {
-            this.init();
-        }
+        this.init();
     }
 
     init() {
         console.log('Initializing FoodSelector...'); // Debug
+        this.setupModals();
         this.loadFoodData();
         this.renderCategories();
         this.setupEventListeners();
+    }
+
+    setupModals() {
+        // Create modal backdrop if it doesn't exist
+        if (!document.getElementById('modalBackdrop')) {
+            const backdrop = document.createElement('div');
+            backdrop.id = 'modalBackdrop';
+            backdrop.className = 'modal-backdrop';
+            document.body.appendChild(backdrop);
+            
+            // Add global backdrop click handler
+            backdrop.addEventListener('click', (e) => {
+                if (e.target === backdrop) {
+                    this.hideModal();
+                }
+            });
+        }
     }
 
     loadFoodData() {
@@ -47,20 +60,20 @@ class FoodSelector {
             const li = document.createElement('li');
             li.className = 'category-item';
             li.dataset.categoryKey = key;
+            
+            // Only add active class to the currently selected category
             if (key === this.selectedCategory) {
                 li.classList.add('active');
             }
+            
             li.textContent = category.name;
-            li.addEventListener('click', () => {
-                // Remove active class from all categories
-                categoryList.querySelectorAll('.category-item').forEach(item => {
-                    item.classList.remove('active');
-                });
-                // Add active class to selected category
-                li.classList.add('active');
-                this.selectedCategory = key;
-                this.renderFoodList();
+            
+            // Simplified click handler
+            li.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent event bubbling
+                this.selectCategory(key);
             });
+            
             categoryList.appendChild(li);
         });
 
@@ -137,23 +150,38 @@ class FoodSelector {
         foodItem.innerHTML = `
             <div class="selected-food-header">
                 <span class="food-item-name">${food.name}</span>
-                <button class="remove-food-btn" onclick="foodSelector.removeFood('${foodKey}')">×</button>
+                <button class="remove-food-btn">×</button>
             </div>
             <div class="amount-control-group">
                 <div class="amount-buttons">
-                    <button onclick="foodSelector.adjustAmount('${foodKey}', -10)">-10</button>
-                    <button onclick="foodSelector.adjustAmount('${foodKey}', -5)">-5</button>
-                    <button onclick="foodSelector.adjustAmount('${foodKey}', -1)">-1</button>
+                    <button data-amount="-10">-10</button>
+                    <button data-amount="-5">-5</button>
+                    <button data-amount="-1">-1</button>
                 </div>
-                <input type="number" value="0" min="0" 
-                       onchange="foodSelector.updateAmount('${foodKey}', this.value)">
+                <input type="number" value="0" min="0">
                 <div class="amount-buttons">
-                    <button onclick="foodSelector.adjustAmount('${foodKey}', 1)">+1</button>
-                    <button onclick="foodSelector.adjustAmount('${foodKey}', 5)">+5</button>
-                    <button onclick="foodSelector.adjustAmount('${foodKey}', 10)">+10</button>
+                    <button data-amount="1">+1</button>
+                    <button data-amount="5">+5</button>
+                    <button data-amount="10">+10</button>
                 </div>
             </div>
         `;
+
+        // Add event listeners
+        const removeBtn = foodItem.querySelector('.remove-food-btn');
+        removeBtn.addEventListener('click', () => this.removeFood(foodKey));
+
+        const amountInput = foodItem.querySelector('input');
+        amountInput.addEventListener('change', (e) => this.updateAmount(foodKey, e.target.value));
+
+        const amountButtons = foodItem.querySelectorAll('.amount-buttons button');
+        amountButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const amount = parseInt(button.dataset.amount);
+                this.adjustAmount(foodKey, amount);
+            });
+        });
+
         selectedFoods.appendChild(foodItem);
         
         // Save to state
@@ -167,62 +195,114 @@ class FoodSelector {
 
     adjustAmount(foodKey, delta) {
         const foodItem = document.querySelector(`[data-food-key="${foodKey}"]`);
+        if (!foodItem) return;
+
         const input = foodItem.querySelector('input');
-        const newValue = Math.max(0, parseInt(input.value) + delta);
-        input.value = newValue;
-        this.updateAmount(foodKey, newValue);
+        const currentAmount = parseInt(input.value) || 0;
+        const newAmount = Math.max(0, currentAmount + delta);
+        
+        input.value = newAmount;
+        
+        // Update state
+        if (app.state.selectedFoods[foodKey]) {
+            app.state.selectedFoods[foodKey].amount = newAmount;
+            this.saveSelectedFoods();
+            this.updateTotalCalories();
+        }
     }
 
-    updateAmount(foodKey, amount) {
-        const value = Math.max(0, parseInt(amount) || 0);
-        app.state.selectedFoods[foodKey].amount = value;
-        this.saveSelectedFoods();
-        this.updateTotalCalories();
+    updateAmount(foodKey, value) {
+        const amount = Math.max(0, parseInt(value) || 0);
+        
+        // Update input value
+        const foodItem = document.querySelector(`[data-food-key="${foodKey}"]`);
+        if (foodItem) {
+            const input = foodItem.querySelector('input');
+            input.value = amount;
+        }
+        
+        // Update state
+        if (app.state.selectedFoods[foodKey]) {
+            app.state.selectedFoods[foodKey].amount = amount;
+            this.saveSelectedFoods();
+            this.updateTotalCalories();
+        }
     }
 
     removeFood(foodKey) {
         const foodItem = document.querySelector(`[data-food-key="${foodKey}"]`);
         if (foodItem) {
-            foodItem.remove();
+            // Add fade-out animation
+            utils.animate(foodItem, [
+                { opacity: 1, transform: 'translateX(0)' },
+                { opacity: 0, transform: 'translateX(-20px)' }
+            ], { duration: 200 }).onfinish = () => {
+                foodItem.remove();
+                // Remove from state
+                delete app.state.selectedFoods[foodKey];
+                this.saveSelectedFoods();
+                // Update total calories
+                this.updateTotalCalories();
+            };
         }
-        delete app.state.selectedFoods[foodKey];
-        this.saveSelectedFoods();
-        this.updateTotalCalories();
     }
 
     saveSelectedFoods() {
-        localStorage.setItem('selectedFoods', JSON.stringify(app.state.selectedFoods));
+        utils.storage.set('selectedFoods', app.state.selectedFoods);
     }
 
     updateTotalCalories() {
-        let total = 0;
-        Object.values(app.state.selectedFoods).forEach(food => {
-            total += (food.calories * food.amount) / 100;
-        });
-        document.getElementById('totalCalories').textContent = Math.round(total);
+        const total = Object.entries(app.state.selectedFoods).reduce((sum, [_, food]) => {
+            return sum + (food.calories * food.amount / 100);
+        }, 0);
+        
+        const totalElement = document.getElementById('totalCalories');
+        if (totalElement) {
+            totalElement.textContent = Math.round(total);
+        }
+    }
+
+    findFoodByKey(foodKey) {
+        for (const category of Object.values(this.foodData.categories)) {
+            if (category.items[foodKey]) {
+                return category.items[foodKey];
+            }
+        }
+        return null;
     }
 
     setupEventListeners() {
         console.log('Setting up event listeners...'); // Debug
         
+        // Add Food button
+        const addFoodBtn = document.querySelector('.add-food-btn');
+        console.log('Looking for add-food-btn:', addFoodBtn); // Debug
+        
+        if (addFoodBtn) {
+            addFoodBtn.addEventListener('click', () => {
+                console.log('Add Food button clicked!'); // Debug
+                this.showAddFoodModal();
+            });
+        } else {
+            console.error('Add Food button not found in the DOM'); // Debug
+        }
+
         // Search functionality
         const searchInput = document.getElementById('foodSearch');
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                console.log('Search input:', e.target.value); // Debug
+            searchInput.addEventListener('input', utils.debounce((e) => {
                 this.handleSearch(e.target.value);
-            });
+            }, 300));
         }
 
-        // Category list clicks
-        const categoryList = document.getElementById('categoryList');
+        // Category list
+        const categoryList = document.querySelector('.category-list');
         if (categoryList) {
             categoryList.addEventListener('click', (e) => {
-                const li = e.target.closest('li');
-                if (li) {
-                    this.selectedCategory = li.dataset.categoryKey;
-                    this.renderCategories();
-                    this.renderFoodList();
+                const categoryItem = e.target.closest('.category-item');
+                if (categoryItem) {
+                    const categoryKey = categoryItem.dataset.category;
+                    this.selectCategory(categoryKey);
                 }
             });
         }
@@ -243,16 +323,6 @@ class FoodSelector {
                 const [categoryKey, itemKey] = e.target.value.split('|');
                 this.addFoodToSelected(categoryKey, itemKey);
             }
-        });
-
-        // Add new food button
-        document.querySelector('.add-food-btn').addEventListener('click', () => {
-            this.showAddFoodModal();
-        });
-
-        // Add new category button
-        document.querySelector('.add-category-btn').addEventListener('click', () => {
-            this.showAddCategoryModal();
         });
     }
 
@@ -327,97 +397,114 @@ class FoodSelector {
     }
 
     showAddFoodModal() {
-        const modal = document.getElementById('addFoodModal');
+        // First, clean up any existing modals
+        this.hideModal();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal';
         modal.innerHTML = `
-            <h3>Add New Food</h3>
             <div class="modal-content">
+                <h3>Add New Food Item</h3>
                 <div class="form-group">
-                    <label for="foodCategory">Category:</label>
-                    <select id="foodCategory">
+                    <label for="categorySelect">Category:</label>
+                    <select id="categorySelect" required>
                         ${this.renderCategoryOptions()}
                     </select>
-                    <button class="btn-link" onclick="foodSelector.showNewCategoryInput()">
-                        + Add New Category
-                    </button>
                 </div>
-                <div id="newCategoryInput" class="form-group hidden">
-                    <label for="newCategory">New Category Name:</label>
-                    <input type="text" id="newCategory" placeholder="Enter category name">
+                <div class="form-group" id="newCategoryGroup" style="display: none;">
+                    <label for="newCategoryName">New Category Name:</label>
+                    <input type="text" id="newCategoryName" placeholder="Enter category name">
                 </div>
                 <div class="form-group">
                     <label for="foodName">Food Name:</label>
-                    <input type="text" id="foodName" placeholder="Enter food name">
+                    <input type="text" id="foodName" required>
                 </div>
                 <div class="form-group">
                     <label for="calories">Calories (per 100g):</label>
-                    <input type="number" id="calories" min="0" step="1">
+                    <input type="number" id="calories" required min="0">
                 </div>
-                <!-- Add more nutritional fields as needed -->
-            </div>
-            <div class="modal-buttons">
-                <button class="btn btn-primary" onclick="foodSelector.saveNewFood()">Add Food</button>
-                <button class="btn" onclick="foodSelector.hideModal()">Cancel</button>
+                <div class="modal-buttons">
+                    <button class="btn btn-primary" id="saveNewFoodBtn">Save</button>
+                    <button class="btn" id="cancelNewFoodBtn">Cancel</button>
+                </div>
             </div>
         `;
-        
-        this.showModal(modal);
-    }
 
-    showNewCategoryInput() {
-        const categorySelect = document.getElementById('foodCategory');
-        const newCategoryInput = document.getElementById('newCategoryInput');
-        
-        categorySelect.style.display = 'none';
-        newCategoryInput.classList.remove('hidden');
-    }
+        // Add event listeners
+        const saveBtn = modal.querySelector('#saveNewFoodBtn');
+        const cancelBtn = modal.querySelector('#cancelNewFoodBtn');
+        const categorySelect = modal.querySelector('#categorySelect');
+        const newCategoryGroup = modal.querySelector('#newCategoryGroup');
 
-    renderCategoryOptions() {
-        return Object.entries(this.foodData.categories)
-            .map(([key, category]) => `
-                <option value="${key}">${category.name}</option>
-            `).join('');
-    }
+        // Show/hide new category input based on selection
+        categorySelect.addEventListener('change', () => {
+            newCategoryGroup.style.display = 
+                categorySelect.value === 'new' ? 'block' : 'none';
+        });
 
-    saveNewFood() {
-        const categorySelect = document.getElementById('foodCategory');
-        const newCategoryInput = document.getElementById('newCategory');
-        const foodName = document.getElementById('foodName').value.trim();
-        const calories = parseInt(document.getElementById('calories').value);
+        const handleSave = () => {
+            let categoryKey = categorySelect.value;
+            const newCategoryName = document.getElementById('newCategoryName')?.value.trim();
+            const foodName = document.getElementById('foodName').value.trim();
+            const calories = parseFloat(document.getElementById('calories').value);
 
-        if (!foodName || !calories) {
-            alert('Please fill in all required fields');
-            return;
-        }
-
-        let categoryKey;
-        let categoryName;
-
-        if (newCategoryInput.style.display !== 'none') {
-            categoryName = newCategoryInput.value.trim();
-            if (!categoryName) {
-                alert('Please enter a category name');
+            if (!foodName || !calories) {
+                alert('Please fill in all required fields');
                 return;
             }
-            categoryKey = categoryName.toLowerCase().replace(/\s+/g, '_');
-            
-            // Create new category if it doesn't exist
-            if (!this.foodData.categories[categoryKey]) {
+
+            if (categoryKey === 'new') {
+                if (!newCategoryName) {
+                    alert('Please enter a category name');
+                    return;
+                }
+                categoryKey = newCategoryName.toLowerCase().replace(/\s+/g, '_');
+                // Create new category
                 this.foodData.categories[categoryKey] = {
-                    name: categoryName,
+                    name: newCategoryName,
                     items: {}
                 };
             }
-        } else {
-            categoryKey = categorySelect.value;
-            categoryName = this.foodData.categories[categoryKey].name;
+
+            this.saveNewFood(categoryKey, foodName, calories);
+            this.hideModal();
+        };
+
+        saveBtn.addEventListener('click', handleSave);
+        cancelBtn.addEventListener('click', () => this.hideModal());
+
+        // Show the modal
+        document.body.appendChild(modal);
+        modal.classList.add('show');
+        
+        // Show backdrop
+        const backdrop = document.getElementById('modalBackdrop');
+        if (backdrop) {
+            backdrop.style.display = 'block';
+        }
+    }
+
+    renderCategoryOptions() {
+        let options = '';
+        Object.entries(this.foodData.categories).forEach(([key, category]) => {
+            options += `<option value="${key}">${category.name}</option>`;
+        });
+        // Add the "New Category" option at the bottom
+        options += `<option value="new">+ New Category</option>`;
+        return options;
+    }
+
+    saveNewFood(categoryKey, foodName, calories) {
+        if (!foodName || !calories || isNaN(calories)) {
+            alert('Please fill in all fields correctly');
+            return;
         }
 
-        const foodKey = foodName.toLowerCase().replace(/\s+/g, '_');
-        
         // Add new food to category
+        const foodKey = foodName.toLowerCase().replace(/\s+/g, '_');
         this.foodData.categories[categoryKey].items[foodKey] = {
             name: foodName,
-            calories: calories
+            calories: parseFloat(calories)
         };
 
         // Save to localStorage
@@ -427,32 +514,42 @@ class FoodSelector {
         this.renderCategories();
         this.selectedCategory = categoryKey;
         this.renderFoodList();
+
+        // Close modal properly
         this.hideModal();
     }
 
-    showModal(modal) {
-        document.getElementById('modalBackdrop').style.display = 'block';
-        modal.style.display = 'block';
+    hideModal() {
+        // Remove any existing modals
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => modal.remove());
         
-        // Add animation
-        utils.animate(modal, [
-            { opacity: 0, transform: 'translate(-50%, -50%) scale(0.8)' },
-            { opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }
-        ]);
+        // Hide backdrop
+        const backdrop = document.getElementById('modalBackdrop');
+        if (backdrop) {
+            backdrop.style.display = 'none';
+        }
     }
 
-    hideModal() {
-        const backdrop = document.getElementById('modalBackdrop');
-        const modals = document.querySelectorAll('.modal');
-        
-        backdrop.style.display = 'none';
-        modals.forEach(modal => {
-            modal.style.display = 'none';
+    selectCategory(key) {
+        // Remove active class from all categories
+        const categoryList = document.getElementById('categoryList');
+        categoryList.querySelectorAll('.category-item').forEach(item => {
+            item.classList.remove('active');
         });
+        
+        // Add active class to selected category
+        const selectedItem = categoryList.querySelector(`[data-category-key="${key}"]`);
+        if (selectedItem) {
+            selectedItem.classList.add('active');
+        }
+        
+        this.selectedCategory = key;
+        this.renderFoodList();
     }
 }
 
-// Initialize food selector after DOM is ready
+// Initialize food selector after DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.foodSelector = new FoodSelector();
 }); 

@@ -29,6 +29,7 @@
             <section class="food-selector">
                 <div class="search-container">
                     <input type="text" id="foodSearch" placeholder="Search foods...">
+                    <ul id="searchResults" class="search-results"></ul>
                 </div>
                 <div class="selector-lists">
                     <div class="category-list">
@@ -47,13 +48,16 @@
             <section class="common-foods">
                 <h2>Selected Food Items</h2>
                 <div id="selectedFoods"></div>
-                <div class="total-calories">
-                    <h2>Total Calories: <span id="totalCalories">0</span></h2>
+                <div class="common-foods-footer">
+                    <div class="total-calories">
+                        <h3>Total Calories: <span id="totalCalories">0</span></h3>
+                    </div>
+                    <button class="log-meal-btn">
+                        <span>+</span>
+                        <span>Log Meal</span>
+                    </button>
                 </div>
             </section>
-
-            <!-- Add this for search results -->
-            <ul id="searchResults" class="search-results"></ul>
         </main>
 
         <!-- Meal Log Section -->
@@ -79,10 +83,13 @@
             </div>
             <div class="meal-log-content">
                 <div class="meal-log-header">
-                    <h2>Meal Log</h2>
-                    <button class="log-meal-btn btn btn-primary">
-                        <span class="material-icons">add</span>
-                        Log Meal
+                    <button class="meal-log-toggle-btn">
+                        <span>Meal Log</span>
+                        <span class="arrow">↓</span>
+                    </button>
+                    <button class="log-meal-btn">
+                        <span>+</span>
+                        <span>Log Meal</span>
                     </button>
                 </div>
                 <div class="meal-log-entries"></div>

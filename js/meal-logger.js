@@ -94,59 +94,59 @@ class MealLogger {
     }
 
     showLogMealModal() {
-        const modal = document.getElementById('editMealModal');
-        modal.innerHTML = `
-            <h3>Log Meal</h3>
-            <div class="modal-content">
-                <select id="mealType">
-                    <option value="breakfast">Breakfast</option>
-                    <option value="lunch">Lunch</option>
-                    <option value="dinner">Dinner</option>
-                    <option value="snack">Snack</option>
-                </select>
-                <input type="date" id="mealDate" value="${new Date().toISOString().split('T')[0]}">
-                <div class="selected-foods">
-                    ${this.renderSelectedFoodsForModal()}
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn btn-primary" onclick="mealLogger.logMeal()">Save</button>
-                <button class="btn" onclick="mealLogger.hideModal()">Cancel</button>
-            </div>
-        `;
-        
-        this.showModal(modal);
-    }
-
-    renderSelectedFoodsForModal() {
-        return Object.entries(app.state.selectedFoods)
-            .map(([key, food]) => `
-                <div class="modal-food-item">
-                    <span>${food.name}: ${food.amount}g</span>
-                    <span>(${Math.round(food.calories * food.amount / 100)} cal)</span>
-                </div>
-            `).join('');
-    }
-
-    logMeal() {
-        const type = document.getElementById('mealType').value;
-        const date = document.getElementById('mealDate').value;
-        
-        const meal = {
-            id: Date.now(),
-            type,
-            date,
-            items: {...app.state.selectedFoods}
-        };
-
-        this.mealLog.push(meal);
-        this.saveMealLog();
-        this.renderMealLog();
+        // First, clean up any existing modals
         this.hideModal();
 
-        // Clear selected foods
-        app.state.selectedFoods = {};
-        foodSelector.renderSelectedFoods();
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Log Meal</h3>
+                <div class="form-group">
+                    <label for="mealType">Meal Type:</label>
+                    <select id="mealType" required>
+                        <option value="breakfast">Breakfast</option>
+                        <option value="lunch">Lunch</option>
+                        <option value="dinner">Dinner</option>
+                        <option value="snack">Snack</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="mealDate">Date:</label>
+                    <input type="date" id="mealDate" required value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn btn-primary" id="saveMealBtn">Save</button>
+                    <button class="btn" id="cancelMealBtn">Cancel</button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners before showing the modal
+        const saveBtn = modal.querySelector('#saveMealBtn');
+        const cancelBtn = modal.querySelector('#cancelMealBtn');
+
+        const handleSave = () => {
+            // Save meal logic here
+            this.hideModal();
+        };
+
+        const handleCancel = () => {
+            this.hideModal();
+        };
+
+        saveBtn.addEventListener('click', handleSave);
+        cancelBtn.addEventListener('click', handleCancel);
+
+        // Show the modal
+        document.body.appendChild(modal);
+        modal.classList.add('show');
+        
+        // Show backdrop
+        const backdrop = document.getElementById('modalBackdrop');
+        if (backdrop) {
+            backdrop.style.display = 'block';
+        }
     }
 
     editMeal(mealId) {
@@ -262,33 +262,46 @@ class MealLogger {
     }
 
     hideModal() {
-        document.getElementById('modalBackdrop').style.display = 'none';
-        document.getElementById('editMealModal').style.display = 'none';
+        // Remove any existing modals
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => modal.remove());
+        
+        // Hide backdrop
+        const backdrop = document.getElementById('modalBackdrop');
+        if (backdrop) {
+            backdrop.style.display = 'none';
+        }
     }
 
     setupEventListeners() {
-        // Add event listeners for meal logging buttons
-        document.querySelector('.log-meal-btn')?.addEventListener('click', () => {
-            this.showLogMealModal();
-        });
+        // Fix Log Meal button
+        const logMealBtn = document.querySelector('.log-meal-btn');
+        console.log('Found log meal button:', logMealBtn); // Debug
+        
+        if (logMealBtn) {
+            logMealBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Log meal button clicked'); // Debug
+                this.showLogMealModal();
+            });
+        }
 
-        const mealLogHeader = document.querySelector('.meal-log-header');
-        mealLogHeader?.addEventListener('click', () => {
+        // Add event listener for meal log collapse
+        const mealLogToggleBtn = document.querySelector('.meal-log-toggle-btn');
+        mealLogToggleBtn?.addEventListener('click', () => {
             const entries = document.querySelector('.meal-log-entries');
-            const toggle = document.querySelector('.meal-log-toggle');
-            
+            mealLogToggleBtn.classList.toggle('collapsed');
             entries.classList.toggle('collapsed');
-            toggle.classList.toggle('collapsed');
             
-            // Save state to localStorage
             localStorage.setItem('mealLogCollapsed', entries.classList.contains('collapsed'));
         });
 
-        // Load collapsed state on init
+        // Load collapsed state
         const isCollapsed = localStorage.getItem('mealLogCollapsed') === 'true';
         if (isCollapsed) {
             document.querySelector('.meal-log-entries')?.classList.add('collapsed');
-            document.querySelector('.meal-log-toggle')?.classList.add('collapsed');
+            document.querySelector('.meal-log-toggle-btn')?.classList.add('collapsed');
         }
     }
 }

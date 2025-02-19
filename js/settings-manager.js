@@ -35,9 +35,12 @@ class SettingsManager {
             document.documentElement.setAttribute('data-theme', this.settings.theme);
         }
 
-        // Apply calorie goal
-        document.getElementById('dailyCalories').value = this.settings.dailyCalories;
-        document.getElementById('dailyBudget').value = this.settings.dailyCalories;
+        // Apply calorie goal - only if elements exist
+        const dailyCaloriesInput = document.getElementById('dailyCalories');
+        const dailyBudgetInput = document.getElementById('dailyBudget');
+        
+        if (dailyCaloriesInput) dailyCaloriesInput.value = this.settings.dailyCalories;
+        if (dailyBudgetInput) dailyBudgetInput.value = this.settings.dailyCalories;
 
         // Update theme selector
         const themeSelect = document.getElementById('themeSelect');
