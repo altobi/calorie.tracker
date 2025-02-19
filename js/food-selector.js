@@ -5,15 +5,13 @@ class FoodSelector {
         const savedData = utils.storage.get('foodData');
         this.foodData = savedData || defaultFoodData;
         this.selectedCategory = null;
-        // Only store the grams in currentMeal
-        window.currentMeal = {}; // Format: { foodKey: grams }
-        app.state.selectedFoods = {}; // Initialize selectedFoods state
-        this.resetCurrentMeal(); // Add this line
-        this.init();
         
-        // Load saved current meal
+        // Load saved current meal first
         const savedMeal = localStorage.getItem('currentMeal');
         window.currentMeal = savedMeal ? JSON.parse(savedMeal) : {};
+        
+        app.state.selectedFoods = {}; // Initialize selectedFoods state
+        this.init();
     }
 
     init() {
@@ -21,6 +19,21 @@ class FoodSelector {
         this.loadFoodData();
         this.renderCategories();
         this.setupEventListeners();
+        
+        // Render any saved meal items
+        if (Object.keys(window.currentMeal).length > 0) {
+            Object.entries(window.currentMeal).forEach(([foodKey, amount]) => {
+                this.addFoodToSelected(this.findCategoryForFood(foodKey), foodKey);
+                const foodItem = document.querySelector(`[data-food-key="${foodKey}"]`);
+                if (foodItem) {
+                    const input = foodItem.querySelector('input');
+                    if (input) {
+                        input.value = amount;
+                        this.updateTotalCalories();
+                    }
+                }
+            });
+        }
     }
 
     setupModals() {
@@ -810,15 +823,16 @@ class FoodSelector {
 
             mealLogger.addMeal(meal);
 
-            // Clear UI
+            // Clear UI and storage
             const selectedFoods = document.getElementById('selectedFoods');
             if (selectedFoods) {
                 const items = selectedFoods.querySelectorAll('.selected-food-item');
                 items.forEach(item => item.remove());
             }
 
-            // Reset state
+            // Reset state and storage
             window.currentMeal = {};
+            localStorage.removeItem('currentMeal');
             this.updateTotalCalories();
         }
     }
@@ -828,6 +842,16 @@ class FoodSelector {
         const food = this.findFoodByKey(foodKey);
         if (!food || !grams) return 0;
         return Math.round((food.calories * grams) / 100);
+    }
+
+    // Add this helper method
+    findCategoryForFood(foodKey) {
+        for (const [categoryKey, category] of Object.entries(this.foodData)) {
+            if (Object.keys(category.items).includes(foodKey)) {
+                return categoryKey;
+            }
+        }
+        return null;
     }
 }
 
