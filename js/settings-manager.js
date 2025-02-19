@@ -12,6 +12,8 @@ class SettingsManager {
         this.loadSettings();
         this.setupEventListeners();
         this.setupSystemThemeDetection();
+        this.initializeTheme();
+        this.setupSettingsModal();
     }
 
     loadSettings() {
@@ -86,106 +88,185 @@ class SettingsManager {
         });
     }
 
-    exportData() {
-        const data = {
-            settings: this.settings,
-            foodData: foodSelector.foodData,
-            mealLog: mealLogger.mealLog
-        };
+    exportMealLog() {
+        const mealLog = JSON.parse(localStorage.getItem('mealLog') || '[]');
+        
+        // Format the meal log into readable text
+        const formattedLog = mealLog.map(meal => {
+            const date = new Date(meal.date).toLocaleDateString();
+            const items = Object.values(meal.items)
+                .map(item => `  • ${item.name}: ${item.amount}g (${item.calories} calories)`)
+                .join('\n');
 
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            return `${date} - ${meal.type.toUpperCase()}\n` +
+                   `${items}\n` +
+                   `Total Calories: ${meal.totalCalories}\n` +
+                   `----------------------------------------`;
+        }).join('\n\n');
+
+        const header = "MEAL LOG\n" +
+                      "========\n\n";
+
+        const content = header + formattedLog;
+
+        // Create and download text file
+        const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `calorie-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
+        a.download = `meal-log-${new Date().toLocaleDateString().replace(/\//g, '-')}.txt`;
         a.click();
-        document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
 
-    async importData() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-
-        input.addEventListener('change', async (e) => {
-            try {
-                const file = e.target.files[0];
-                const text = await file.text();
-                const data = JSON.parse(text);
-
-                // Validate data structure
-                if (!data.settings || !data.foodData || !data.mealLog) {
-                    throw new Error('Invalid backup file format');
-                }
-
-                // Import settings
-                this.settings = { ...this.settings, ...data.settings };
-                this.saveSettings();
-
-                // Import food data
-                foodSelector.foodData = data.foodData;
-                localStorage.setItem('foodData', JSON.stringify(data.foodData));
-                foodSelector.renderCategories();
-
-                // Import meal log
-                mealLogger.mealLog = data.mealLog;
-                mealLogger.saveMealLog();
-                mealLogger.renderMealLog();
-
-                alert('Data imported successfully!');
-            } catch (error) {
-                alert('Error importing data: ' + error.message);
-            }
-        });
-
-        input.click();
-    }
-
     confirmClearData() {
-        const modal = document.createElement('div');
-        modal.className = 'modal show';
-        modal.innerHTML = `
-            <h3>Clear All Data</h3>
-            <p>Are you sure you want to clear all data? This action cannot be undone.</p>
-            <div class="modal-buttons">
-                <button class="btn btn-danger" onclick="settingsManager.clearAllData()">
-                    Clear All Data
-                </button>
-                <button class="btn" onclick="this.closest('.modal').remove()">
-                    Cancel
-                </button>
-            </div>
-        `;
-        document.body.appendChild(modal);
+        if (confirm('Are you sure you want to reset all data to defaults? This will remove all saved meals but keep your theme settings.')) {
+            this.clearAllData();
+        }
     }
 
     clearAllData() {
-        // Clear all localStorage
+        // Clear all localStorage except theme settings
+        const currentTheme = localStorage.getItem('theme');
+        const currentSystemTheme = this.settings.systemTheme;
         localStorage.clear();
+        
+        // Restore theme settings
+        if (currentTheme) {
+            localStorage.setItem('theme', currentTheme);
+        }
 
-        // Reset settings
+        // Reset settings to defaults but keep theme
         this.settings = {
-            theme: 'light',
+            theme: this.settings.theme,
             dailyCalories: 2000,
-            systemTheme: false
+            systemTheme: currentSystemTheme
         };
         this.saveSettings();
 
-        // Reset food data
-        foodSelector.foodData = { categories: {} };
-        foodSelector.renderCategories();
+        // Reset food data to defaults and save to storage
+        utils.storage.set('foodData', defaultFoodData);
 
-        // Reset meal log
-        mealLogger.mealLog = [];
-        mealLogger.renderMealLog();
+        // Reload the page to ensure everything is fresh
+        window.location.reload();
+    }
 
-        // Hide modal
-        document.querySelector('.modal')?.remove();
+    initializeTheme() {
+        // Check if user has previously set a theme
+        const savedTheme = localStorage.getItem('theme');
+        
+        if (!savedTheme) {
+            // Use system preference
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        } else {
+            // Use saved theme
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
 
-        // Show confirmation
-        alert('All data has been cleared.');
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (!localStorage.getItem('theme')) {
+                document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+            }
+        });
+    }
+
+    setupSettingsModal() {
+        // Create backdrop if it doesn't exist (only for desktop)
+        if (window.innerWidth >= 769) {
+            let backdrop = document.querySelector('.settings-backdrop');
+            if (!backdrop) {
+                backdrop = document.createElement('div');
+                backdrop.className = 'settings-backdrop';
+                document.body.appendChild(backdrop);
+            }
+        }
+
+        // Setup event listeners
+        const settingsBtn = document.getElementById('settingsBtn');
+        const closeBtn = document.getElementById('closeSettingsBtn');
+        const isMobile = window.innerWidth < 769;
+
+        settingsBtn?.addEventListener('click', () => {
+            if (isMobile) {
+                document.body.dataset.page = 'settings';
+            } else {
+                document.querySelector('.settings-backdrop')?.classList.add('show');
+            }
+            document.querySelector('.settings-page').classList.add('show');
+        });
+
+        closeBtn?.addEventListener('click', () => {
+            this.hideSettings();
+        });
+
+        document.querySelector('.settings-backdrop')?.addEventListener('click', () => {
+            this.hideSettings();
+        });
+
+        // Update the reset defaults button structure
+        const resetContainer = document.querySelector('.setting-item:has(button.btn-danger)');
+        if (resetContainer) {
+            resetContainer.innerHTML = `
+                <div class="reset-buttons">
+                    <button class="btn btn-danger" id="resetDefaultsBtn">
+                        Reset to Defaults
+                    </button>
+                    <button class="btn btn-danger" id="confirmResetBtn" style="display: none;">
+                        Confirm Reset
+                    </button>
+                </div>
+                <p class="setting-description">
+                    This will reset all data to default values and remove saved meals
+                </p>
+            `;
+
+            const resetBtn = document.getElementById('resetDefaultsBtn');
+            const confirmBtn = document.getElementById('confirmResetBtn');
+
+            resetBtn.addEventListener('click', () => {
+                resetBtn.style.display = 'none';
+                confirmBtn.style.display = 'inline-block';
+                
+                // Hide confirm button after 3 seconds if not clicked
+                setTimeout(() => {
+                    resetBtn.style.display = 'inline-block';
+                    confirmBtn.style.display = 'none';
+                }, 3000);
+            });
+
+            confirmBtn.addEventListener('click', () => {
+                this.clearAllData();
+            });
+        }
+
+        // Update export functionality
+        const exportBtn = document.getElementById('exportDataBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.exportMealLog());
+        }
+
+        // Remove import button from HTML
+        const importBtn = document.getElementById('importDataBtn');
+        if (importBtn) {
+            importBtn.remove();
+        }
+    }
+
+    hideSettings() {
+        const isMobile = window.innerWidth < 769;
+        if (isMobile) {
+            document.body.dataset.page = 'calculator';
+        } else {
+            document.querySelector('.settings-backdrop')?.classList.remove('show');
+        }
+        document.querySelector('.settings-page')?.classList.remove('show');
     }
 }
 

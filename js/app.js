@@ -7,6 +7,7 @@ const state = {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
+    window.currentMeal = {}; // Initialize currentMeal
     initializeApp();
     loadSavedState();
     setupEventListeners();
@@ -120,4 +121,35 @@ window.filterFoodItems = filterFoodItems;
 window.app = {
     state,
     setActivePage
-}; 
+};
+
+function switchPage(page) {
+    document.body.dataset.page = page;
+    
+    // Update active state of nav buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.page === page);
+    });
+
+    // Smooth transition between pages
+    const pages = ['calculator', 'log', 'settings'];
+    pages.forEach(p => {
+        const section = document.querySelector(`.${p}-page`);
+        if (section) {
+            if (p === page) {
+                section.style.display = 'block';
+                // Add a small delay to trigger the transition
+                setTimeout(() => {
+                    section.style.opacity = '1';
+                    section.style.transform = 'translateX(0)';
+                }, 50);
+            } else {
+                section.style.opacity = '0';
+                section.style.transform = 'translateX(20px)';
+                setTimeout(() => {
+                    section.style.display = 'none';
+                }, 300);
+            }
+        }
+    });
+} 

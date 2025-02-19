@@ -12,7 +12,7 @@
 <body>
     <div class="container">
         <header class="page-header">
-            <h1>Meal Calorie Calculator</h1>
+            <h1>Meal Calorie Tracker</h1>
             <div class="header-controls">
                 <button id="settingsBtn" class="icon-button" aria-label="Settings">
                     <span class="material-icons">settings</span>
@@ -46,7 +46,7 @@
 
             <!-- Common Food Items Section -->
             <section class="common-foods">
-                <h2>Selected Food Items</h2>
+                <h2>Current Meal Items</h2>
                 <div id="selectedFoods"></div>
                 <div class="common-foods-footer">
                     <div class="total-calories">
@@ -115,19 +115,35 @@
             <div class="settings-group">
                 <h3>Data Management</h3>
                 <div class="setting-item">
-                    <button class="btn" onclick="settingsManager.exportData()">
-                        Export Data
-                    </button>
-                    <button class="btn" onclick="settingsManager.importData()">
-                        Import Data
-                    </button>
-                </div>
-                <div class="setting-item">
-                    <button class="btn btn-danger" onclick="settingsManager.confirmClearData()">
-                        Clear All Data
+                    <button class="btn btn-primary add-food-btn-mobile">
+                        + Add New Food Item
                     </button>
                     <p class="setting-description">
-                        This will remove all saved meals and custom foods
+                        Add custom foods to your database
+                    </p>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h3>Data Management</h3>
+                <div class="setting-item">
+                    <button class="btn btn-primary" id="exportDataBtn">
+                        Export Meal Log
+                    </button>
+                    <p class="setting-description">
+                        Download your meal log history
+                    </p>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h3>Data Management</h3>
+                <div class="setting-item">
+                    <button class="btn btn-danger" onclick="settingsManager.confirmClearData()">
+                        Reset to Defaults
+                    </button>
+                    <p class="setting-description">
+                        This will reset all data to default values and remove saved meals
                     </p>
                 </div>
             </div>
@@ -157,11 +173,11 @@
 
     <!-- Scripts -->
     <script src="js/utils.js"></script>
+    <script src="js/food-database.js"></script>
     <script src="js/food-selector.js"></script>
     <script src="js/meal-logger.js"></script>
     <script src="js/theme-manager.js"></script>
     <script src="js/settings-manager.js"></script>
     <script src="js/app.js"></script>
-    <script src="js/food-database.js"></script>
 </body>
 </html> 

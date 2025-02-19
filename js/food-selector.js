@@ -1,13 +1,18 @@
 // Food selector functionality
 class FoodSelector {
     constructor() {
-        this.foodData = defaultFoodData;
+        // Initialize with default data or load from storage
+        const savedData = utils.storage.get('foodData');
+        this.foodData = savedData || defaultFoodData;
         this.selectedCategory = null;
+        // Only store the grams in currentMeal
+        window.currentMeal = {}; // Format: { foodKey: grams }
+        app.state.selectedFoods = {}; // Initialize selectedFoods state
+        this.resetCurrentMeal(); // Add this line
         this.init();
     }
 
     init() {
-        console.log('Initializing FoodSelector...'); // Debug
         this.setupModals();
         this.loadFoodData();
         this.renderCategories();
@@ -32,54 +37,47 @@ class FoodSelector {
     }
 
     loadFoodData() {
-        console.log('Loading food data...'); // Debug
-        // Start with default food data
-        this.foodData = defaultFoodData;
-        
-        // Merge with any saved custom food data
-        const savedFoodData = utils.storage.get('foodData');
-        if (savedFoodData && savedFoodData.categories) {
-            this.foodData = {
-                categories: {
-                    ...defaultFoodData.categories,
-                    ...savedFoodData.categories
-                }
-            };
+        const savedData = utils.storage.get('foodData');
+        if (savedData) {
+            this.foodData = savedData;
+        } else {
+            this.foodData = JSON.parse(JSON.stringify(defaultFoodData));
+            utils.storage.set('foodData', this.foodData);
         }
-        console.log('Loaded food data:', this.foodData); // Debug
     }
 
     renderCategories() {
-        console.log('Rendering categories...'); // Debug
         const categoryList = document.getElementById('categoryList');
         if (!categoryList) return;
 
         categoryList.innerHTML = '';
+        
+        if (!this.foodData) {
+            console.error('No food data available');
+            return;
+        }
 
-        Object.entries(this.foodData.categories).forEach(([key, category]) => {
+        Object.entries(this.foodData).forEach(([key, category]) => {
             const li = document.createElement('li');
             li.className = 'category-item';
             li.dataset.categoryKey = key;
             
-            // Only add active class to the currently selected category
             if (key === this.selectedCategory) {
                 li.classList.add('active');
             }
             
             li.textContent = category.name;
-            
-            // Simplified click handler
             li.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent event bubbling
+                e.stopPropagation();
                 this.selectCategory(key);
             });
             
             categoryList.appendChild(li);
         });
 
-        // If no category is selected, select the first one
-        if (!this.selectedCategory && Object.keys(this.foodData.categories).length > 0) {
-            this.selectedCategory = Object.keys(this.foodData.categories)[0];
+        // Select first category if none selected
+        if (!this.selectedCategory && Object.keys(this.foodData).length > 0) {
+            this.selectedCategory = Object.keys(this.foodData)[0];
             categoryList.querySelector('.category-item')?.classList.add('active');
             this.renderFoodList();
         }
@@ -91,23 +89,31 @@ class FoodSelector {
 
         foodList.innerHTML = '';
 
-        if (this.selectedCategory && this.foodData.categories[this.selectedCategory]) {
-            const category = this.foodData.categories[this.selectedCategory];
+        // If no category is selected, don't show any foods
+        if (!this.selectedCategory) return;
+
+        if (this.foodData[this.selectedCategory]) {
+            const category = this.foodData[this.selectedCategory];
             Object.entries(category.items).forEach(([key, item]) => {
                 const li = document.createElement('li');
                 li.className = 'food-item';
                 li.innerHTML = `
                     <div class="food-item-main">
-                        <span class="food-item-name">${item.name}</span>
+                        <span class="food-item-name">${key}</span>
                         <span class="food-item-calories">${item.calories} cal/100g</span>
                     </div>
                     <div class="food-item-details" style="display: none;">
                         <div class="nutrition-info">
-                            <div>Protein: ${item.protein}g</div>
-                            <div>Fat: ${item.fat}g</div>
-                            <div>Carbs: ${item.carbs}g</div>
+                            <div>Protein: ${item.protein || 0}g</div>
+                            <div>Fat: ${item.fat || 0}g</div>
+                            <div>Carbs: ${item.carbs || 0}g</div>
                         </div>
-                        <button class="add-to-selected-btn">Add to Selected</button>
+                        <div class="food-item-actions">
+                            <div class="button-group">
+                                <button class="btn btn-primary btn-sm add-to-selected-btn">Add</button>
+                                <button class="btn btn-secondary btn-sm edit-food-btn">Edit</button>
+                            </div>
+                        </div>
                     </div>
                 `;
 
@@ -116,17 +122,20 @@ class FoodSelector {
                 const details = li.querySelector('.food-item-details');
                 mainSection.addEventListener('click', () => {
                     const wasHidden = details.style.display === 'none';
-                    // Hide all other details
                     foodList.querySelectorAll('.food-item-details').forEach(d => {
                         d.style.display = 'none';
                     });
                     details.style.display = wasHidden ? 'block' : 'none';
                 });
 
-                // Add to selected when button is clicked
+                // Add to selected
                 li.querySelector('.add-to-selected-btn').addEventListener('click', () => {
                     this.addFoodToSelected(this.selectedCategory, key);
-                    details.style.display = 'none';
+                });
+
+                // Edit food item
+                li.querySelector('.edit-food-btn').addEventListener('click', () => {
+                    this.showEditFoodModal(this.selectedCategory, key);
                 });
 
                 foodList.appendChild(li);
@@ -135,22 +144,19 @@ class FoodSelector {
     }
 
     addFoodToSelected(categoryKey, foodKey) {
-        const food = this.foodData.categories[categoryKey].items[foodKey];
+        const food = this.foodData[categoryKey].items[foodKey];
         const selectedFoods = document.getElementById('selectedFoods');
         
         // Check if food is already added
         const existingItem = selectedFoods.querySelector(`[data-food-key="${foodKey}"]`);
-        if (existingItem) {
-            return;
-        }
+        if (existingItem) return;
 
         const foodItem = document.createElement('div');
         foodItem.className = 'selected-food-item';
         foodItem.dataset.foodKey = foodKey;
         foodItem.innerHTML = `
             <div class="selected-food-header">
-                <span class="food-item-name">${food.name}</span>
-                <button class="remove-food-btn">×</button>
+                <span class="food-item-name">${foodKey}</span>
             </div>
             <div class="amount-control-group">
                 <div class="amount-buttons">
@@ -165,6 +171,7 @@ class FoodSelector {
                     <button data-amount="10">+10</button>
                 </div>
             </div>
+            <button class="remove-food-btn">×</button>
         `;
 
         // Add event listeners
@@ -184,12 +191,13 @@ class FoodSelector {
 
         selectedFoods.appendChild(foodItem);
         
-        // Save to state
+        // Initialize with 0 amount and no calories
         app.state.selectedFoods[foodKey] = {
-            name: food.name,
-            calories: food.calories,
-            amount: 0
+            name: foodKey,
+            amount: 0,
+            baseCalories: parseFloat(food.calories) // Store base calories per 100g
         };
+
         this.saveSelectedFoods();
     }
 
@@ -203,47 +211,56 @@ class FoodSelector {
         
         input.value = newAmount;
         
-        // Update state
-        if (app.state.selectedFoods[foodKey]) {
-            app.state.selectedFoods[foodKey].amount = newAmount;
-            this.saveSelectedFoods();
-            this.updateTotalCalories();
+        // Only store the grams
+        if (newAmount > 0) {
+            window.currentMeal[foodKey] = newAmount;
+        } else {
+            delete window.currentMeal[foodKey];
         }
+
+        this.updateTotalCalories();
+        this.renderCurrentMealSummary();
     }
 
     updateAmount(foodKey, value) {
-        const amount = Math.max(0, parseInt(value) || 0);
+        const newAmount = Math.max(0, parseInt(value) || 0);
         
         // Update input value
         const foodItem = document.querySelector(`[data-food-key="${foodKey}"]`);
         if (foodItem) {
             const input = foodItem.querySelector('input');
-            input.value = amount;
+            input.value = newAmount;
         }
         
         // Update state
         if (app.state.selectedFoods[foodKey]) {
-            app.state.selectedFoods[foodKey].amount = amount;
+            app.state.selectedFoods[foodKey].amount = newAmount;
             this.saveSelectedFoods();
-            this.updateTotalCalories();
         }
+
+        // Update currentMeal
+        const food = this.findFoodByKey(foodKey);
+        if (food) {
+            if (newAmount > 0) {
+                window.currentMeal[foodKey] = newAmount;
+            } else {
+                delete window.currentMeal[foodKey];
+            }
+        }
+
+        this.updateTotalCalories();
+        this.renderCurrentMealSummary();
     }
 
     removeFood(foodKey) {
         const foodItem = document.querySelector(`[data-food-key="${foodKey}"]`);
         if (foodItem) {
-            // Add fade-out animation
-            utils.animate(foodItem, [
-                { opacity: 1, transform: 'translateX(0)' },
-                { opacity: 0, transform: 'translateX(-20px)' }
-            ], { duration: 200 }).onfinish = () => {
-                foodItem.remove();
-                // Remove from state
-                delete app.state.selectedFoods[foodKey];
-                this.saveSelectedFoods();
-                // Update total calories
-                this.updateTotalCalories();
-            };
+            foodItem.remove();
+            delete app.state.selectedFoods[foodKey];
+            delete window.currentMeal[foodKey];
+            this.saveSelectedFoods();
+            this.updateTotalCalories();
+            this.renderCurrentMealSummary();
         }
     }
 
@@ -252,18 +269,21 @@ class FoodSelector {
     }
 
     updateTotalCalories() {
-        const total = Object.entries(app.state.selectedFoods).reduce((sum, [_, food]) => {
-            return sum + (food.calories * food.amount / 100);
-        }, 0);
+        let total = 0;
         
-        const totalElement = document.getElementById('totalCalories');
-        if (totalElement) {
-            totalElement.textContent = Math.round(total);
+        Object.entries(window.currentMeal).forEach(([foodKey, grams]) => {
+            total += this.calculateCalories(foodKey, grams);
+        });
+
+        // Only update the total calories in the footer
+        const totalCaloriesSpan = document.querySelector('.common-foods-footer .total-calories #totalCalories');
+        if (totalCaloriesSpan) {
+            totalCaloriesSpan.textContent = total;
         }
     }
 
     findFoodByKey(foodKey) {
-        for (const category of Object.values(this.foodData.categories)) {
+        for (const category of Object.values(this.foodData)) {
             if (category.items[foodKey]) {
                 return category.items[foodKey];
             }
@@ -272,19 +292,17 @@ class FoodSelector {
     }
 
     setupEventListeners() {
-        console.log('Setting up event listeners...'); // Debug
-        
-        // Add Food button
+        // Add Food button handlers (both desktop and mobile)
         const addFoodBtn = document.querySelector('.add-food-btn');
-        console.log('Looking for add-food-btn:', addFoodBtn); // Debug
-        
+        const addFoodBtnMobile = document.querySelector('.add-food-btn-mobile');
+
+        const showAddFoodModal = () => this.showAddFoodModal();
+
         if (addFoodBtn) {
-            addFoodBtn.addEventListener('click', () => {
-                console.log('Add Food button clicked!'); // Debug
-                this.showAddFoodModal();
-            });
-        } else {
-            console.error('Add Food button not found in the DOM'); // Debug
+            addFoodBtn.addEventListener('click', showAddFoodModal);
+        }
+        if (addFoodBtnMobile) {
+            addFoodBtnMobile.addEventListener('click', showAddFoodModal);
         }
 
         // Search functionality
@@ -293,6 +311,14 @@ class FoodSelector {
             searchInput.addEventListener('input', utils.debounce((e) => {
                 this.handleSearch(e.target.value);
             }, 300));
+
+            // Hide search results when clicking outside
+            document.addEventListener('click', (e) => {
+                const searchResults = document.getElementById('searchResults');
+                if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.style.display = 'none';
+                }
+            });
         }
 
         // Category list
@@ -326,58 +352,63 @@ class FoodSelector {
         });
     }
 
-    handleSearch(searchTerm) {
-        console.log('Handling search:', searchTerm); // Debug
+    handleSearch(query) {
         const searchResults = document.getElementById('searchResults');
-        if (!searchResults) return;
-
         searchResults.innerHTML = '';
-        
-        if (!searchTerm.trim()) {
+
+        if (!query.trim()) {
             searchResults.style.display = 'none';
             return;
         }
 
         const results = [];
-        Object.entries(this.foodData.categories).forEach(([categoryKey, category]) => {
-            Object.entries(category.items).forEach(([itemKey, item]) => {
-                if (item.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+        const searchTerm = query.toLowerCase();
+
+        // Search through all categories and their items
+        Object.entries(this.foodData).forEach(([categoryKey, category]) => {
+            Object.entries(category.items).forEach(([foodKey, food]) => {
+                // Search by food key (name) since that's how we store it
+                if (foodKey.toLowerCase().includes(searchTerm)) {
                     results.push({
                         categoryKey,
-                        itemKey,
-                        ...item,
-                        categoryName: category.name
+                        foodKey,
+                        name: foodKey,
+                        calories: food.calories
                     });
                 }
             });
         });
 
-        console.log('Search results:', results); // Debug
-
         if (results.length > 0) {
-            searchResults.style.display = 'block';
             results.forEach(result => {
                 const li = document.createElement('li');
                 li.className = 'search-result-item';
                 li.innerHTML = `
-                    <div class="food-item-header">
-                        <span class="food-name">${result.name}</span>
-                        <span class="food-category">${result.categoryName}</span>
-                    </div>
-                    <div class="food-item-details">
-                        <span>${result.calories} cal</span>
-                        <span>${result.protein}g protein</span>
-                    </div>
+                    <span class="food-name">${result.name}</span>
+                    <span class="food-calories">${result.calories} cal/100g</span>
                 `;
                 li.addEventListener('click', () => {
-                    this.addFoodToSelected(result.categoryKey, result.itemKey);
+                    this.selectCategory(result.categoryKey);
                     searchResults.style.display = 'none';
+                    // Clear search input
                     document.getElementById('foodSearch').value = '';
+                    
+                    // Highlight the found item
+                    setTimeout(() => {
+                        const foodItem = document.querySelector(`[data-food-key="${result.foodKey}"]`);
+                        if (foodItem) {
+                            foodItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            foodItem.classList.add('highlight');
+                            setTimeout(() => foodItem.classList.remove('highlight'), 2000);
+                        }
+                    }, 100);
                 });
                 searchResults.appendChild(li);
             });
+            searchResults.style.display = 'block';
         } else {
-            searchResults.style.display = 'none';
+            searchResults.innerHTML = '<li class="no-results">No matching foods found</li>';
+            searchResults.style.display = 'block';
         }
     }
 
@@ -385,8 +416,8 @@ class FoodSelector {
         const foodSelect = document.getElementById('foodItemSelect');
         foodSelect.innerHTML = '<option value="">Select a food item</option>';
 
-        if (this.selectedCategory && this.foodData.categories[this.selectedCategory]) {
-            const category = this.foodData.categories[this.selectedCategory];
+        if (this.selectedCategory && this.foodData[this.selectedCategory]) {
+            const category = this.foodData[this.selectedCategory];
             Object.entries(category.items).forEach(([key, item]) => {
                 const option = document.createElement('option');
                 option.value = `${this.selectedCategory}|${key}`;
@@ -413,7 +444,9 @@ class FoodSelector {
                 </div>
                 <div class="form-group" id="newCategoryGroup" style="display: none;">
                     <label for="newCategoryName">New Category Name:</label>
-                    <input type="text" id="newCategoryName" placeholder="Enter category name">
+                    <div class="input-wrapper">
+                        <input type="text" id="newCategoryName" placeholder="Enter category name">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="foodName">Food Name:</label>
@@ -422,6 +455,18 @@ class FoodSelector {
                 <div class="form-group">
                     <label for="calories">Calories (per 100g):</label>
                     <input type="number" id="calories" required min="0">
+                </div>
+                <div class="form-group">
+                    <label for="protein">Protein (g):</label>
+                    <input type="number" id="protein" value="0" min="0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="fat">Fat (g):</label>
+                    <input type="number" id="fat" value="0" min="0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="carbs">Carbs (g):</label>
+                    <input type="number" id="carbs" value="0" min="0" step="0.1">
                 </div>
                 <div class="modal-buttons">
                     <button class="btn btn-primary" id="saveNewFoodBtn">Save</button>
@@ -447,6 +492,9 @@ class FoodSelector {
             const newCategoryName = document.getElementById('newCategoryName')?.value.trim();
             const foodName = document.getElementById('foodName').value.trim();
             const calories = parseFloat(document.getElementById('calories').value);
+            const protein = parseFloat(document.getElementById('protein').value);
+            const fat = parseFloat(document.getElementById('fat').value);
+            const carbs = parseFloat(document.getElementById('carbs').value);
 
             if (!foodName || !calories) {
                 alert('Please fill in all required fields');
@@ -460,13 +508,13 @@ class FoodSelector {
                 }
                 categoryKey = newCategoryName.toLowerCase().replace(/\s+/g, '_');
                 // Create new category
-                this.foodData.categories[categoryKey] = {
+                this.foodData[categoryKey] = {
                     name: newCategoryName,
                     items: {}
                 };
             }
 
-            this.saveNewFood(categoryKey, foodName, calories);
+            this.saveNewFood(categoryKey, foodName, calories, protein, fat, carbs);
             this.hideModal();
         };
 
@@ -486,7 +534,7 @@ class FoodSelector {
 
     renderCategoryOptions() {
         let options = '';
-        Object.entries(this.foodData.categories).forEach(([key, category]) => {
+        Object.entries(this.foodData).forEach(([key, category]) => {
             options += `<option value="${key}">${category.name}</option>`;
         });
         // Add the "New Category" option at the bottom
@@ -494,7 +542,7 @@ class FoodSelector {
         return options;
     }
 
-    saveNewFood(categoryKey, foodName, calories) {
+    saveNewFood(categoryKey, foodName, calories, protein, fat, carbs) {
         if (!foodName || !calories || isNaN(calories)) {
             alert('Please fill in all fields correctly');
             return;
@@ -502,13 +550,16 @@ class FoodSelector {
 
         // Add new food to category
         const foodKey = foodName.toLowerCase().replace(/\s+/g, '_');
-        this.foodData.categories[categoryKey].items[foodKey] = {
+        this.foodData[categoryKey].items[foodKey] = {
             name: foodName,
-            calories: parseFloat(calories)
+            calories: parseFloat(calories),
+            protein: parseFloat(protein),
+            fat: parseFloat(fat),
+            carbs: parseFloat(carbs)
         };
 
         // Save to localStorage
-        localStorage.setItem('foodData', JSON.stringify(this.foodData));
+        utils.storage.set('foodData', this.foodData);
 
         // Update display
         this.renderCategories();
@@ -532,20 +583,241 @@ class FoodSelector {
     }
 
     selectCategory(key) {
-        // Remove active class from all categories
         const categoryList = document.getElementById('categoryList');
+        const selectedItem = categoryList.querySelector(`[data-category-key="${key}"]`);
+        
+        // If clicking the already selected category, deselect it
+        if (key === this.selectedCategory) {
+            this.selectedCategory = null;
+            categoryList.querySelectorAll('.category-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            this.renderFoodList(); // This will clear the food list
+            return;
+        }
+
+        // Otherwise, select the new category
         categoryList.querySelectorAll('.category-item').forEach(item => {
             item.classList.remove('active');
         });
         
-        // Add active class to selected category
-        const selectedItem = categoryList.querySelector(`[data-category-key="${key}"]`);
         if (selectedItem) {
             selectedItem.classList.add('active');
         }
         
         this.selectedCategory = key;
         this.renderFoodList();
+    }
+
+    showEditFoodModal(categoryKey, foodKey) {
+        const food = this.foodData[categoryKey].items[foodKey];
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Edit Food Item</h3>
+                <div class="form-group">
+                    <label for="editFoodName">Food Name:</label>
+                    <input type="text" id="editFoodName" value="${food.name}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCalories">Calories (per 100g):</label>
+                    <input type="number" id="editCalories" value="${food.calories}" required min="0">
+                </div>
+                <div class="form-group">
+                    <label for="editProtein">Protein (g):</label>
+                    <input type="number" id="editProtein" value="${food.protein || 0}" min="0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="editFat">Fat (g):</label>
+                    <input type="number" id="editFat" value="${food.fat || 0}" min="0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="editCarbs">Carbs (g):</label>
+                    <input type="number" id="editCarbs" value="${food.carbs || 0}" min="0" step="0.1">
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn btn-primary" id="saveEditFoodBtn">Save Changes</button>
+                    <button class="btn" id="cancelEditFoodBtn">Cancel</button>
+                    <button class="btn btn-danger" id="deleteFoodBtn">Delete</button>
+                    <button class="btn btn-danger" id="confirmDeleteBtn" style="display: none;">Confirm Delete</button>
+                </div>
+            </div>
+        `;
+
+        const saveBtn = modal.querySelector('#saveEditFoodBtn');
+        const deleteBtn = modal.querySelector('#deleteFoodBtn');
+        const cancelBtn = modal.querySelector('#cancelEditFoodBtn');
+        const confirmDeleteBtn = modal.querySelector('#confirmDeleteBtn');
+
+        saveBtn.addEventListener('click', () => {
+            const newName = document.getElementById('editFoodName').value.trim();
+            const newCalories = parseFloat(document.getElementById('editCalories').value);
+            const newProtein = parseFloat(document.getElementById('editProtein').value);
+            const newFat = parseFloat(document.getElementById('editFat').value);
+            const newCarbs = parseFloat(document.getElementById('editCarbs').value);
+
+            if (!newName || !newCalories) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            this.foodData[categoryKey].items[foodKey] = {
+                name: newName,
+                calories: newCalories,
+                protein: newProtein,
+                fat: newFat,
+                carbs: newCarbs
+            };
+
+            utils.storage.set('foodData', this.foodData);
+            this.renderFoodList();
+            this.hideModal();
+        });
+
+        deleteBtn.addEventListener('click', () => {
+            deleteBtn.style.display = 'none';
+            confirmDeleteBtn.style.display = 'inline-block';
+            
+            // Hide confirm button after 3 seconds if not clicked
+            setTimeout(() => {
+                deleteBtn.style.display = 'inline-block';
+                confirmDeleteBtn.style.display = 'none';
+            }, 3000);
+        });
+
+        confirmDeleteBtn.addEventListener('click', () => {
+            delete this.foodData[categoryKey].items[foodKey];
+            utils.storage.set('foodData', this.foodData);
+            
+            // Check if category is empty and delete if it is
+            if (Object.keys(this.foodData[categoryKey].items).length === 0) {
+                delete this.foodData[categoryKey];
+                this.selectedCategory = Object.keys(this.foodData)[0] || null;
+                this.renderCategories();
+            }
+            
+            this.renderFoodList();
+            this.hideModal();
+        });
+
+        cancelBtn.addEventListener('click', () => this.hideModal());
+
+        document.body.appendChild(modal);
+        modal.classList.add('show');
+        
+        const backdrop = document.getElementById('modalBackdrop');
+        if (backdrop) {
+            backdrop.style.display = 'block';
+        }
+    }
+
+    deleteCategory(categoryKey) {
+        delete this.foodData[categoryKey];
+        
+        // Save to localStorage using utils storage
+        utils.storage.set('foodData', this.foodData);
+        
+        // Update selected category if needed
+        if (this.selectedCategory === categoryKey) {
+            this.selectedCategory = Object.keys(this.foodData)[0] || null;
+        }
+        
+        // Update display
+        this.renderCategories();
+        this.renderFoodList();
+        this.hideModal();
+    }
+
+    handleFoodSelection(foodItem, amount) {
+        const name = foodItem.name;
+        const calories = foodItem.calories;
+        
+        // Fix calculation here
+        if (amount > 0) {
+            window.currentMeal[name] = {
+                grams: amount,
+                // Calculate calories based on amount per 100g
+                calories: (amount * calories / 100),
+                caloriesPer100g: calories
+            };
+        } else {
+            delete window.currentMeal[name];
+        }
+        
+        this.renderCurrentMealSummary();
+    }
+
+    renderCurrentMealSummary() {
+        const currentMealItems = document.getElementById('currentMealItems');
+        const currentMealTotal = document.getElementById('currentMealTotal');
+        if (!currentMealItems || !currentMealTotal) return;
+
+        currentMealItems.innerHTML = '';
+        let totalCalories = 0;
+
+        Object.entries(window.currentMeal).forEach(([foodKey, grams]) => {
+            const food = this.findFoodByKey(foodKey);
+            if (food && grams > 0) {
+                // Calculate calories: (calories per 100g * amount in grams) / 100
+                const itemCalories = Math.round((parseFloat(food.calories) * grams) / 100);
+                currentMealItems.innerHTML += `<div>${foodKey}: ${grams}g (${itemCalories} cal)</div>`;
+                totalCalories += itemCalories;
+            }
+        });
+
+        currentMealTotal.textContent = Math.round(totalCalories);
+    }
+
+    resetCurrentMeal() {
+        window.currentMeal = {};
+        app.state.selectedFoods = {};
+        this.updateTotalCalories();
+        this.renderCurrentMealSummary();
+    }
+
+    logCurrentMeal() {
+        const mealItems = [];
+        let totalCalories = 0;
+
+        for (const [foodKey, grams] of Object.entries(window.currentMeal)) {
+            const calories = this.calculateCalories(foodKey, grams);
+            mealItems.push({
+                name: foodKey,
+                grams: grams,
+                calories: calories
+            });
+            totalCalories += calories;
+        }
+
+        if (mealItems.length > 0) {
+            const meal = {
+                items: mealItems,
+                totalCalories: totalCalories,
+                timestamp: new Date().toISOString()
+            };
+
+            mealLogger.addMeal(meal);
+
+            // Clear UI
+            const selectedFoods = document.getElementById('selectedFoods');
+            if (selectedFoods) {
+                const items = selectedFoods.querySelectorAll('.selected-food-item');
+                items.forEach(item => item.remove());
+            }
+
+            // Reset state
+            window.currentMeal = {};
+            this.updateTotalCalories();
+        }
+    }
+
+    // Single source of truth for calorie calculation
+    calculateCalories(foodKey, grams) {
+        const food = this.findFoodByKey(foodKey);
+        if (!food || !grams) return 0;
+        return Math.round((food.calories * grams) / 100);
     }
 }
 
