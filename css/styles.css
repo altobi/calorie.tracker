@@ -904,6 +904,16 @@ body.modal-open {
 
 .setting-item {
     margin-bottom: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.setting-item .btn {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
 }
 
 .setting-item label {
@@ -928,10 +938,28 @@ body.modal-open {
     font-size: 0.9rem;
     color: var(--text-secondary);
     margin-top: var(--spacing-xs);
+    max-width: 300px;
+    text-align: center;
 }
 
-.setting-item .btn {
-    margin-right: var(--spacing-sm);
+/* Specific styles for settings that shouldn't be centered */
+.setting-item:has(label) {
+    align-items: flex-start;
+    text-align: left;
+}
+
+.setting-item:has(select) {
+    align-items: flex-start;
+    text-align: left;
+}
+
+/* Keep reset buttons full width */
+.setting-item:has(.reset-buttons) {
+    align-items: stretch;
+}
+
+.reset-buttons {
+    width: 100%;
 }
 
 /* Food List Item Styles */
