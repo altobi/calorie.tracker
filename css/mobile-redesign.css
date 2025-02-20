@@ -441,33 +441,45 @@
     /* Mobile navigation iOS fixes */
     .mobile-nav {
         -webkit-appearance: none;
-        background: var(--card-background);
-        border-top: 1px solid var(--border-color);
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
-        padding: env(safe-area-inset-bottom) 0 0 0;
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        height: calc(60px + env(safe-area-inset-bottom));
+        background: var(--background-color);
+        padding-bottom: env(safe-area-inset-bottom);
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-start;
+        z-index: 9999;
+    }
+
+    .mobile-nav::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--card-background);
+        z-index: -1;
     }
 
     .mobile-nav .nav-btn {
         -webkit-appearance: none;
         -webkit-tap-highlight-color: transparent;
-        color: var(--text-color);
-        background: var(--card-background);
+        background: transparent;
         border: none;
+        padding: var(--spacing-sm);
+        height: 60px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 4px;
-        height: 60px;
+        flex: 1;
+        color: var(--text-color);
         font-size: 0.8rem;
-        padding: 0;
-        margin: 0;
     }
 
     .mobile-nav .nav-btn .material-icons {
@@ -481,6 +493,13 @@
 
     .mobile-nav .nav-btn.active .material-icons {
         color: var(--primary-color);
+    }
+
+    /* Add padding to main content to account for fixed nav */
+    .main-content,
+    .meal-log,
+    .settings-page {
+        padding-bottom: calc(60px + env(safe-area-inset-bottom));
     }
 }
 
