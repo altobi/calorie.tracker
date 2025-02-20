@@ -765,7 +765,73 @@ body.modal-open {
 
 /* Settings Page Styles */
 .settings-page {
-    display: none;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: var(--spacing-md);
+    background: var(--background-color);
+}
+
+/* Settings groups */
+.settings-group {
+    margin-bottom: var(--spacing-xl);
+    width: 100%;
+}
+
+.settings-group h3 {
+    margin-bottom: var(--spacing-md);
+    padding: 0 var(--spacing-sm);
+}
+
+/* Settings items - iOS specific fixes */
+.setting-item {
+    width: 100%;
+    margin-bottom: var(--spacing-lg);
+    display: block; /* Change from flex to block for iOS */
+    text-align: center; /* Center all content */
+}
+
+/* Button container */
+.setting-item-content {
+    width: 100%;
+    padding: 0 var(--spacing-md);
+    margin: 0 auto;
+}
+
+/* Button styling */
+.setting-item .btn {
+    width: 100%;
+    display: block; /* Force block display */
+    margin: 0 auto;
+    text-align: center;
+}
+
+/* Description text */
+.setting-description {
+    width: 100%;
+    text-align: center;
+    margin-top: var(--spacing-sm);
+    padding: 0 var(--spacing-md);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* Form elements specific styling */
+.setting-item:has(label:not(.btn)),
+.setting-item:has(select) {
+    text-align: left;
+}
+
+.setting-item:has(label:not(.btn)) .setting-description,
+.setting-item:has(select) .setting-description {
+    text-align: left;
+    padding-left: var(--spacing-md);
+}
+
+/* Reset buttons container */
+.reset-buttons {
+    width: 100%;
+    padding: 0 var(--spacing-md);
 }
 
 /* Desktop settings modal */
