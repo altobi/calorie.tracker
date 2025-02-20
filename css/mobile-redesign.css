@@ -15,7 +15,11 @@
         margin-bottom: var(--spacing-sm);
     }
 
-    .page-header h1 {
+    .page-header h1.desktop-only {
+        display: none; /* Hide the desktop title on mobile */
+    }
+
+    .page-header h1.mobile-only {
         font-size: 1.4rem;
         text-align: center;
         margin: 0;
@@ -184,8 +188,7 @@
 
     /* Settings Page */
     .settings-title {
-        text-align: center;
-        margin-bottom: var(--spacing-lg);
+        display: none; /* Hide the duplicate settings title */
     }
 
     .settings-group {
@@ -349,33 +352,36 @@
     }
 
     /* Mobile-specific meal log styles */
-    .meal-log-entries .meal-entry {
+    .meal-log-entries > .meal-entry {
         background: var(--card-background);
         border-radius: var(--border-radius-md);
         margin-bottom: var(--spacing-md);
         overflow: hidden;
+        -webkit-appearance: none; /* iOS fix */
     }
 
-    .meal-log-entries .meal-entry-header {
+    .meal-log-entries > .meal-entry > .meal-entry-header {
         padding: var(--spacing-md);
         background: var(--background-color);
         display: flex;
         justify-content: space-between;
         align-items: center;
+        -webkit-appearance: none; /* iOS fix */
     }
 
-    .meal-log-entries .meal-actions {
+    .meal-log-entries > .meal-entry .meal-actions {
         display: flex;
         align-items: center;
         gap: var(--spacing-sm);
     }
 
-    .meal-log-entries .meal-actions .btn-icon {
+    .meal-log-entries > .meal-entry .meal-actions .btn-icon {
         padding: var(--spacing-xs);
         color: var(--text-secondary);
         background: none;
         border: none;
         cursor: pointer;
+        -webkit-appearance: none; /* iOS fix */
     }
 
     .meal-log-entries .meal-actions .btn-icon:hover {
@@ -424,6 +430,31 @@
         text-align: center;
         padding: var(--spacing-lg);
         color: var(--text-secondary);
+    }
+
+    /* Remove unwanted margins */
+    .meal-log,
+    .settings-page {
+        margin-top: 0;
+    }
+
+    /* Mobile navigation iOS fixes */
+    .mobile-nav {
+        -webkit-appearance: none;
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+    }
+
+    .mobile-nav .nav-btn {
+        -webkit-appearance: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+}
+
+/* Desktop-specific styles */
+@media screen and (min-width: 769px) {
+    .page-header h1.mobile-only {
+        display: none; /* Hide mobile titles on desktop */
     }
 }
 
