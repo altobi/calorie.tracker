@@ -440,66 +440,49 @@
 
     /* Mobile navigation iOS fixes */
     .mobile-nav {
-        -webkit-appearance: none;
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
-        background: var(--background-color);
-        padding-bottom: env(safe-area-inset-bottom);
+        min-height: 60px;
+        background-color: var(--card-background);
         border-top: 1px solid var(--border-color);
+        padding: 0 0 env(safe-area-inset-bottom, 0) 0;
         display: flex;
         justify-content: space-around;
-        align-items: flex-start;
+        align-items: center;
         z-index: 9999;
-    }
-
-    .mobile-nav::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--card-background);
-        z-index: -1;
     }
 
     .mobile-nav .nav-btn {
         -webkit-appearance: none;
         -webkit-tap-highlight-color: transparent;
-        background: transparent;
+        background: none;
         border: none;
-        padding: var(--spacing-sm);
+        flex: 1;
         height: 60px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 4px;
-        flex: 1;
         color: var(--text-color);
         font-size: 0.8rem;
     }
 
-    .mobile-nav .nav-btn .material-icons {
-        color: var(--text-color);
-        font-size: 24px;
-    }
+    /* Add viewport height consideration for content */
+    @supports (-webkit-touch-callout: none) {
+        /* iOS-specific */
+        .main-content,
+        .meal-log,
+        .settings-page {
+            min-height: -webkit-fill-available;
+            padding-bottom: calc(60px + env(safe-area-inset-bottom));
+        }
 
-    .mobile-nav .nav-btn.active {
-        color: var(--primary-color);
-    }
-
-    .mobile-nav .nav-btn.active .material-icons {
-        color: var(--primary-color);
-    }
-
-    /* Add padding to main content to account for fixed nav */
-    .main-content,
-    .meal-log,
-    .settings-page {
-        padding-bottom: calc(60px + env(safe-area-inset-bottom));
+        .mobile-nav {
+            height: calc(60px + env(safe-area-inset-bottom));
+        }
     }
 }
 
