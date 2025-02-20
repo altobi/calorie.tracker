@@ -441,16 +441,18 @@
     /* Mobile navigation iOS fixes */
     .mobile-nav {
         -webkit-appearance: none;
-        background: rgba(var(--card-background-rgb), 0.95);
+        background: var(--card-background);
         border-top: 1px solid var(--border-color);
         z-index: 1000;
         position: fixed;
-        bottom: 0;
+        bottom: env(safe-area-inset-bottom, 0);
         left: 0;
         right: 0;
-        padding: var(--spacing-sm);
-        transform: translateZ(0); /* Force GPU acceleration */
-        will-change: transform; /* Hint to browser about animations */
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        height: 60px;
+        padding-bottom: env(safe-area-inset-bottom, 0);
     }
 
     .mobile-nav .nav-btn {
@@ -458,14 +460,15 @@
         -webkit-tap-highlight-color: transparent;
         color: var(--text-color);
         background: transparent;
-        position: relative;
-        z-index: 1001;
         border: none;
-        padding: var(--spacing-sm);
+        flex: 1;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 4px;
+        height: 100%;
+        font-size: 0.8rem;
     }
 
     .mobile-nav .nav-btn .material-icons {

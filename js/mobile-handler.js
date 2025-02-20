@@ -43,7 +43,24 @@ class MobileHandler {
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const page = btn.dataset.page;
+                
+                // Remove active class from all buttons
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                btn.classList.add('active');
+                
+                // Update page title
                 this.updatePageTitle(page);
+                
+                // Update body dataset
+                document.body.dataset.page = page;
+                
+                // Additional page-specific setup
+                if (page === 'log') {
+                    setTimeout(() => {
+                        this.setupDateSelector();
+                    }, 100);
+                }
             });
         });
 
@@ -57,25 +74,27 @@ class MobileHandler {
     }
 
     updatePageTitle(page) {
+        // Get all title elements
+        const calculatorTitle = document.querySelector('.calculator-title');
+        const logTitle = document.querySelector('.log-title');
+        const settingsTitle = document.querySelector('.settings-title');
+
         // Hide all titles first
-        const titles = document.querySelectorAll('.mobile-only .calculator-title, .mobile-only .log-title, .mobile-only .settings-title');
-        titles.forEach(title => {
-            title.style.display = 'none';
-        });
+        if (calculatorTitle) calculatorTitle.style.display = 'none';
+        if (logTitle) logTitle.style.display = 'none';
+        if (settingsTitle) settingsTitle.style.display = 'none';
 
         // Show only the current page title
-        const titleMap = {
-            calculator: '.calculator-title',
-            log: '.log-title',
-            settings: '.settings-title'
-        };
-
-        const titleSelector = titleMap[page];
-        if (titleSelector) {
-            const titleElement = document.querySelector(`.mobile-only ${titleSelector}`);
-            if (titleElement) {
-                titleElement.style.display = 'block';
-            }
+        switch (page) {
+            case 'calculator':
+                if (calculatorTitle) calculatorTitle.style.display = 'block';
+                break;
+            case 'log':
+                if (logTitle) logTitle.style.display = 'block';
+                break;
+            case 'settings':
+                if (settingsTitle) logTitle.style.display = 'block';
+                break;
         }
     }
 
