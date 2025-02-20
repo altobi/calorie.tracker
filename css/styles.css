@@ -895,71 +895,77 @@ body.modal-open {
 }
 
 .settings-group h3 {
-    color: var(--text-secondary);
-    font-size: 1.1rem;
     margin-bottom: var(--spacing-md);
-    padding-bottom: var(--spacing-xs);
-    border-bottom: 1px solid var(--border-color);
 }
 
 .setting-item {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    text-align: center;
 }
 
+/* Center buttons in settings */
 .setting-item .btn {
     width: 100%;
     max-width: 300px;
     margin: 0 auto;
-}
-
-.setting-item label {
-    display: block;
-    margin-bottom: var(--spacing-xs);
-    color: var(--text-color);
-    font-weight: 500;
-}
-
-.setting-item select,
-.setting-item input {
-    width: 100%;
-    max-width: 300px;
-    padding: var(--spacing-sm);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-sm);
-    background-color: var(--background-color);
-    color: var(--text-color);
-}
-
-.setting-description {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    margin-top: var(--spacing-xs);
-    max-width: 300px;
     text-align: center;
 }
 
-/* Specific styles for settings that shouldn't be centered */
-.setting-item:has(label) {
-    align-items: flex-start;
-    text-align: left;
+.setting-description {
+    width: 100%;
+    max-width: 300px;
+    text-align: center;
+    margin-top: var(--spacing-sm);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
 }
 
+/* Specific styles for form elements */
+.setting-item:has(label:not(.btn)),
 .setting-item:has(select) {
     align-items: flex-start;
+}
+
+.setting-item:has(label:not(.btn)) .setting-description,
+.setting-item:has(select) .setting-description {
     text-align: left;
 }
 
-/* Keep reset buttons full width */
+/* Reset buttons specific styling */
 .setting-item:has(.reset-buttons) {
     align-items: stretch;
 }
 
 .reset-buttons {
     width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+/* Mobile specific adjustments */
+@media screen and (max-width: 768px) {
+    .settings-page {
+        padding: var(--spacing-md);
+    }
+    
+    .setting-item {
+        padding: 0;
+        background: none;
+        box-shadow: none;
+    }
+
+    .setting-item .btn {
+        width: 100%;
+        max-width: none;
+    }
+
+    .setting-description {
+        max-width: none;
+        padding: 0 var(--spacing-sm);
+    }
 }
 
 /* Food List Item Styles */
