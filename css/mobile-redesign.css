@@ -441,11 +441,16 @@
     /* Mobile navigation iOS fixes */
     .mobile-nav {
         -webkit-appearance: none;
-        background: var(--card-background);
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
+        background: rgba(var(--card-background-rgb), 0.95);
         border-top: 1px solid var(--border-color);
         z-index: 1000;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: var(--spacing-sm);
+        transform: translateZ(0); /* Force GPU acceleration */
+        will-change: transform; /* Hint to browser about animations */
     }
 
     .mobile-nav .nav-btn {
@@ -455,6 +460,12 @@
         background: transparent;
         position: relative;
         z-index: 1001;
+        border: none;
+        padding: var(--spacing-sm);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
 
     .mobile-nav .nav-btn .material-icons {
