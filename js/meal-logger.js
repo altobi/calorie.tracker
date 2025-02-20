@@ -12,21 +12,38 @@ class MealLogger {
     }
 
     loadMealLog() {
-        console.log('Loading meal log');
         const savedLog = localStorage.getItem('mealLog');
         if (savedLog) {
             try {
                 this.mealLog = JSON.parse(savedLog);
-                console.log('Loaded meal log:', this.mealLog);
+                
+                // Validate and clean up each meal entry
+                this.mealLog = this.mealLog.filter(meal => {
+                    if (!meal || !meal.items) return false;
+                    
+                    // Convert items to consistent format
+                    const formattedItems = {};
+                    Object.entries(meal.items).forEach(([name, item]) => {
+                        if (item) {
+                            formattedItems[name] = {
+                                amount: item.amount || item.grams || 0,
+                                calories: item.calories || 0
+                            };
+                        }
+                    });
+                    
+                    meal.items = formattedItems;
+                    return true;
+                });
             } catch (e) {
-                console.error('Error loading meal log:', e);
                 this.mealLog = [];
             }
+        } else {
+            this.mealLog = [];
         }
     }
 
     saveMealLog() {
-        console.log('Saving meal log:', this.mealLog);
         localStorage.setItem('mealLog', JSON.stringify(this.mealLog));
         this.updateCalorieProgress();
     }
@@ -87,25 +104,43 @@ class MealLogger {
     }
 
     createMealEntry(entry) {
+        // Validate entry and items exist
+        if (!entry || !entry.items) {
+            return '';
+        }
+
         const itemsList = Object.entries(entry.items)
-            .map(([key, item]) => {
-                // Use the stored calories directly instead of recalculating
-                return `${item.name}: ${item.amount}g (${item.calories} cal)`;
+            .map(([name, item]) => {
+                // Skip invalid items
+                if (!item) {
+                    return '';
+                }
+
+                try {
+                    // Handle both old and new item formats
+                    const itemName = item.name || name;
+                    const amount = item.amount || item.grams || 0;
+                    const calories = item.calories || 0;
+                    return `${itemName}: ${amount}g (${calories} cal)`;
+                } catch (error) {
+                    return '';
+                }
             })
+            .filter(item => item) // Remove empty strings
             .join(', ');
 
         return `
-            <div class="meal-entry" data-meal-id="${entry.id}">
-                <div class="meal-entry-type">${entry.type}</div>
+            <div class="meal-entry" data-meal-id="${entry.id || ''}">
+                <div class="meal-entry-type">${entry.type || 'meal'}</div>
                 <div class="meal-entry-items">${itemsList}</div>
                 <div class="meal-entry-total">
-                    Total: ${entry.totalCalories} calories
+                    Total: ${entry.totalCalories || 0} calories
                 </div>
                 <div class="meal-entry-controls">
-                    <button class="btn btn-primary" onclick="mealLogger.editMeal(${entry.id})">
+                    <button class="btn btn-primary" onclick="mealLogger.editMeal(${entry.id || 0})">
                         Edit
                     </button>
-                    <button class="btn btn-danger" onclick="mealLogger.deleteMeal(${entry.id})">
+                    <button class="btn btn-danger" onclick="mealLogger.confirmDelete(${entry.id || 0}, this)">
                         Delete
                     </button>
                 </div>
@@ -274,9 +309,16 @@ class MealLogger {
         const meal = this.mealLog.find(m => m.id === id);
         if (!meal) return;
 
-        // Create a deep copy of the meal for editing
-        const editingMeal = JSON.parse(JSON.stringify(meal));
         this.currentEditingMealId = id;
+        
+        // Create a temporary copy for editing
+        this.editingMealCopy = JSON.parse(JSON.stringify(meal));
+        
+        // Store original calories per gram for each item
+        this.originalCaloriesPerGram = {};
+        Object.entries(meal.items).forEach(([name, item]) => {
+            this.originalCaloriesPerGram[name] = item.calories / item.amount;
+        });
 
         const modal = document.createElement('div');
         modal.className = 'modal';
@@ -318,12 +360,13 @@ class MealLogger {
 
         saveBtn.addEventListener('click', () => {
             // Update the original meal with the edited copy's data
-            meal.type = document.getElementById('editMealType').value;
-            meal.date = document.getElementById('editMealDate').value;
-            meal.items = editingMeal.items;
-            meal.totalCalories = editingMeal.totalCalories;
-
-            this.saveMealLog();
+            const index = this.mealLog.findIndex(m => m.id === id);
+            if (index !== -1) {
+                this.editingMealCopy.type = document.getElementById('editMealType').value;
+                this.editingMealCopy.date = document.getElementById('editMealDate').value;
+                this.mealLog[index] = this.editingMealCopy;
+                this.saveMealLog();
+            }
             
             // Check if we're on mobile
             if (window.innerWidth <= 768) {
@@ -337,53 +380,65 @@ class MealLogger {
             this.hideModal();
             this.updateCalorieProgress();
             this.currentEditingMealId = null;
+            this.editingMealCopy = null;
         });
 
         cancelBtn.addEventListener('click', () => {
             this.hideModal();
             this.currentEditingMealId = null;
+            this.editingMealCopy = null;
         });
     }
 
     renderEditableFoods(items) {
         return Object.entries(items).map(([name, item]) => `
-            <div class="meal-item">
-                <div class="meal-item-details">
-                    <span>${name}</span>
-                    <span>${item.amount}g (${item.calories} cal)</span>
-                </div>
-                <div class="meal-item-controls">
+            <div class="meal-item-edit">
+                <span class="item-name">${name}</span>
+                <div class="item-controls">
                     <input type="number" 
-                           value="${item.amount}" 
-                           min="0" 
-                           data-name="${name}"
-                           onchange="mealLogger.updateMealItemAmount('${name}', this.value)">
-                    <button class="btn btn-danger btn-sm" 
-                            onclick="mealLogger.removeMealItem('${name}')">×</button>
+                        value="${item.amount || item.grams}" 
+                        min="0" 
+                        onchange="mealLogger.updateItemAmount('${name}', this.value)"
+                        class="amount-input">
+                    <span class="unit">g</span>
+                    <span class="item-calories">${item.calories} cal</span>
+                    <button class="btn btn-icon" onclick="mealLogger.removeMealItem('${name}')">
+                        <span class="material-icons">remove</span>
+                    </button>
                 </div>
             </div>
         `).join('');
     }
 
-    updateMealItemAmount(name, amount) {
-        const meal = this.mealLog.find(m => m.id === this.currentEditingMealId);
-        if (!meal || !meal.items[name]) return;
+    updateItemAmount(name, amount) {
+        if (!this.editingMealCopy || !this.editingMealCopy.items[name]) return;
 
-        amount = parseFloat(amount);
-        if (isNaN(amount) || amount < 0) amount = 0;
+        const newAmount = parseInt(amount) || 0;
+        const item = this.editingMealCopy.items[name];
+        
+        // Use stored calories per gram for calculation
+        const caloriesPerGram = this.originalCaloriesPerGram[name];
+        
+        // Update the temporary copy
+        item.amount = newAmount;
+        item.calories = Math.round(caloriesPerGram * newAmount);
 
-        const item = meal.items[name];
-        item.amount = amount;
-        item.calories = Math.round((amount * item.caloriesPer100g) / 100);
-
-        // Update total calories in the meal object
-        meal.totalCalories = Object.values(meal.items)
+        // Update total calories for the temporary meal
+        this.editingMealCopy.totalCalories = Object.values(this.editingMealCopy.items)
             .reduce((sum, item) => sum + item.calories, 0);
 
-        // Update the total display in the modal
+        // Update displays in the modal only
+        const itemElement = document.querySelector(`.meal-item-edit:has([value="${amount}"])`);
+        if (itemElement) {
+            const caloriesDisplay = itemElement.querySelector('.item-calories');
+            if (caloriesDisplay) {
+                caloriesDisplay.textContent = `${item.calories} cal`;
+            }
+        }
+
         const totalDisplay = document.querySelector('.edit-meal-total');
         if (totalDisplay) {
-            totalDisplay.textContent = `Total: ${meal.totalCalories} calories`;
+            totalDisplay.textContent = `Total: ${this.editingMealCopy.totalCalories} calories`;
         }
     }
 
@@ -418,25 +473,19 @@ class MealLogger {
     }
 
     deleteMeal(id) {
-        console.log('Deleting meal with ID:', id); // Debug log
         const index = this.mealLog.findIndex(meal => meal.id === Number(id));
         if (index !== -1) {
             this.mealLog.splice(index, 1);
             this.saveMealLog();
 
-            // Check if we're on mobile
             if (window.innerWidth <= 768) {
-                // Get the currently selected date
                 const activeDate = document.querySelector('.date-item.active');
                 if (activeDate && window.mobileHandler) {
                     window.mobileHandler.handleDateSelection(activeDate.dataset.date);
                 }
             } else {
-                // Desktop rendering
                 this.renderMealLog();
             }
-        } else {
-            console.error('Meal not found with ID:', id);
         }
     }
 
@@ -449,34 +498,40 @@ class MealLogger {
         const todayCalories = todayEntries.reduce((sum, entry) => 
             sum + entry.totalCalories, 0);
         
-        const percentage = Math.min((todayCalories / budget) * 100, 100);
+        // Calculate actual percentage for display
+        const actualPercentage = (todayCalories / budget) * 100;
+        
+        // Cap the visual fill at 100% but keep actual percentage for text
+        const visualPercentage = Math.min(actualPercentage, 100);
         
         // Update progress ring
         const circle = document.querySelector('.progress-ring-value');
         if (circle) {
             const radius = circle.r.baseVal.value;
             const circumference = radius * 2 * Math.PI;
-            const offset = circumference - (percentage / 100 * circumference);
+            
+            // Use capped percentage for visual fill
+            const offset = circumference - (visualPercentage / 100 * circumference);
             
             circle.style.strokeDasharray = `${circumference} ${circumference}`;
             circle.style.strokeDashoffset = offset;
             
-            // Update color based on percentage
-            circle.style.stroke = this.getColorForPercentage(percentage);
+            // Use actual percentage for color
+            circle.style.stroke = this.getColorForPercentage(actualPercentage);
         }
         
-        // Update percentage text
+        // Show actual percentage in text
         const percentageText = document.getElementById('caloriePercentage');
         if (percentageText) {
-            percentageText.textContent = `${Math.round(percentage)}%`;
+            percentageText.textContent = `${Math.round(actualPercentage)}%`;
         }
     }
 
     getColorForPercentage(percentage) {
-        if (percentage <= 50) return '#4CAF50';
-        if (percentage <= 75) return '#FFC107';
-        if (percentage <= 90) return '#FF9800';
-        return '#F44336';
+        if (percentage <= 50) return '#4CAF50';  // Green
+        if (percentage <= 75) return '#FFC107';  // Yellow
+        if (percentage <= 100) return '#FF9800'; // Orange
+        return '#F44336';  // Red for over 100%
     }
 
     showModal(modal) {
@@ -525,23 +580,74 @@ class MealLogger {
     }
 
     addMeal(meal) {
-        console.log('Adding meal:', meal); // Debug log
         const date = new Date();
         meal.timestamp = date.toISOString();
         meal.date = date.toISOString().split('T')[0];
+        meal.id = Date.now();
 
-        // Ensure meal.items is an array
-        if (meal.items && !Array.isArray(meal.items)) {
-            meal.items = Object.entries(meal.items).map(([name, details]) => ({
-                name: name,
-                grams: details.grams || details.amount,
-                calories: details.calories
-            }));
+        if (meal.items) {
+            const formattedItems = {};
+            if (Array.isArray(meal.items)) {
+                meal.items.forEach(item => {
+                    formattedItems[item.name] = {
+                        amount: item.grams || item.amount,
+                        calories: item.calories
+                    };
+                });
+            } else {
+                Object.entries(meal.items).forEach(([name, details]) => {
+                    formattedItems[name] = {
+                        amount: details.grams || details.amount,
+                        calories: details.calories
+                    };
+                });
+            }
+            meal.items = formattedItems;
         }
 
         this.mealLog.push(meal);
-        console.log('Updated meal log:', this.mealLog); // Debug log
         this.saveMealLog();
+    }
+
+    confirmDelete(mealId, button) {
+        // If already in confirmation state, ignore
+        if (button.classList.contains('confirm-delete')) {
+            return;
+        }
+
+        // Change button text to confirm
+        const originalText = button.textContent;
+        button.textContent = 'Confirm Delete';
+        button.classList.add('confirm-delete');
+        
+        // Set timeout to revert button
+        const timeoutId = setTimeout(() => {
+            resetButton();
+        }, 3000); // Increased to 3 seconds
+
+        const resetButton = () => {
+            button.textContent = originalText;
+            button.classList.remove('confirm-delete');
+            // Remove the click handler when resetting
+            button.removeEventListener('click', confirmHandler);
+        };
+
+        // Add one-time click event for confirmation
+        const confirmHandler = (e) => {
+            e.stopPropagation();
+            clearTimeout(timeoutId); // Clear the timeout
+            this.deleteMeal(mealId);
+        };
+
+        button.addEventListener('click', confirmHandler, { once: true });
+
+        // Cancel confirmation if clicked elsewhere
+        document.addEventListener('click', (e) => {
+            if (!button.contains(e.target) && button.classList.contains('confirm-delete')) {
+                clearTimeout(timeoutId); // Clear the timeout
+                resetButton();
+            }
+        }, { once: true });
     }
 }
 

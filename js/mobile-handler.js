@@ -57,20 +57,25 @@ class MobileHandler {
     }
 
     updatePageTitle(page) {
-        // Hide all titles
-        document.querySelectorAll('.mobile-only.calculator-title, .mobile-only.log-title, .mobile-only.settings-title')
-            .forEach(el => el.style.display = 'none');
+        // Hide all titles first
+        const titles = document.querySelectorAll('.mobile-only .calculator-title, .mobile-only .log-title, .mobile-only .settings-title');
+        titles.forEach(title => {
+            title.style.display = 'none';
+        });
 
-        // Show current page title
+        // Show only the current page title
         const titleMap = {
             calculator: '.calculator-title',
             log: '.log-title',
             settings: '.settings-title'
         };
 
-        const titleElement = document.querySelector(titleMap[page]);
-        if (titleElement) {
-            titleElement.style.display = 'block';
+        const titleSelector = titleMap[page];
+        if (titleSelector) {
+            const titleElement = document.querySelector(`.mobile-only ${titleSelector}`);
+            if (titleElement) {
+                titleElement.style.display = 'block';
+            }
         }
     }
 
@@ -228,7 +233,7 @@ class MobileHandler {
 
         // Calculate total calories for the selected date
         const totalCalories = selectedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0);
-        const percentage = Math.min((totalCalories / budget) * 100, 100);
+        const percentage = (totalCalories / budget) * 100;
 
         // Update progress ring
         const circle = document.querySelector('.progress-ring-value');
@@ -332,8 +337,8 @@ class MobileHandler {
     getColorForPercentage(percentage) {
         if (percentage <= 50) return '#4CAF50';  // Green
         if (percentage <= 75) return '#FFC107';  // Yellow
-        if (percentage <= 90) return '#FF9800';  // Orange
-        return '#F44336';  // Red
+        if (percentage <= 100) return '#FF9800'; // Orange
+        return '#F44336';  // Red for over 100%
     }
 
     // Separate method for centering

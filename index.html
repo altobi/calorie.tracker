@@ -27,9 +27,11 @@
     <div class="container">
         <header class="page-header">
             <h1 class="desktop-only">Meal Calorie Tracker</h1>
-            <h1 class="mobile-only calculator-title">Calculator</h1>
-            <h1 class="mobile-only log-title" style="display: none;">Meal Log</h1>
-            <h1 class="mobile-only settings-title" style="display: none;">Settings</h1>
+            <div class="mobile-only">
+                <h1 class="calculator-title">Calculator</h1>
+                <h1 class="log-title" style="display: none;">Meal Log</h1>
+                <h1 class="settings-title" style="display: none;">Settings</h1>
+            </div>
             <div class="header-controls">
                 <button id="settingsBtn" class="icon-button" aria-label="Settings">
                     <span class="material-icons">settings</span>
@@ -186,7 +188,7 @@
             </div>
 
             <div class="settings-footer">
-                <p class="version-info">Version 1.0.4</p>
+                <p class="version-info">Version 1.0.6</p>
             </div>
         </section>
 

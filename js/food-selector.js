@@ -1,17 +1,67 @@
 // Food selector functionality
 class FoodSelector {
     constructor() {
-        // Initialize with default data or load from storage
-        const savedData = utils.storage.get('foodData');
-        this.foodData = savedData || defaultFoodData;
         this.selectedCategory = null;
+        this.foodData = {};
         
-        // Load saved current meal first
+        // Bind methods once
+        this.boundShowAddFoodModal = this.showAddFoodModal.bind(this);
+        
+        // Initialize
+        this.loadFoodData();
+        this.setupEventListeners();
+        
+        // Load saved current meal
         const savedMeal = localStorage.getItem('currentMeal');
         window.currentMeal = savedMeal ? JSON.parse(savedMeal) : {};
         
         app.state.selectedFoods = {}; // Initialize selectedFoods state
-        this.init();
+        
+        // Render any saved meal items
+        if (Object.keys(window.currentMeal).length > 0) {
+            this.renderSelectedFoods();
+        }
+    }
+
+    loadFoodData() {
+        // Load food data from localStorage or use default
+        const savedData = utils.storage.get('foodData');
+        if (savedData) {
+            this.foodData = savedData;
+            // Clean up empty categories on load
+            this.removeEmptyCategories();
+        } else {
+            // Load default data
+            this.foodData = defaultFoodData;
+        }
+        
+        // Save cleaned data back to storage
+        utils.storage.set('foodData', this.foodData);
+        
+        // Render initial state
+        this.renderCategories();
+        this.renderFoodList();
+    }
+
+    removeEmptyCategories() {
+        let hasChanges = false;
+        Object.keys(this.foodData).forEach(categoryKey => {
+            // Skip default categories
+            if (categoryKey === 'fruits' || categoryKey === 'vegetables' || categoryKey === 'meats') {
+                return;
+            }
+            
+            // Check if category is empty
+            if (Object.keys(this.foodData[categoryKey].items).length === 0) {
+                delete this.foodData[categoryKey];
+                hasChanges = true;
+            }
+        });
+        
+        // Only save if changes were made
+        if (hasChanges) {
+            utils.storage.set('foodData', this.foodData);
+        }
     }
 
     init() {
@@ -43,24 +93,22 @@ class FoodSelector {
             backdrop.id = 'modalBackdrop';
             backdrop.className = 'modal-backdrop';
             document.body.appendChild(backdrop);
-            
-            // Add global backdrop click handler
-            backdrop.addEventListener('click', (e) => {
-                if (e.target === backdrop) {
-                    this.hideModal();
-                }
-            });
         }
-    }
 
-    loadFoodData() {
-        const savedData = utils.storage.get('foodData');
-        if (savedData) {
-            this.foodData = savedData;
-        } else {
-            this.foodData = JSON.parse(JSON.stringify(defaultFoodData));
-            utils.storage.set('foodData', this.foodData);
+        // Create the add food modal if it doesn't exist
+        if (!document.getElementById('addFoodModal')) {
+            const modal = document.createElement('div');
+            modal.id = 'addFoodModal';
+            modal.className = 'modal';
+            document.body.appendChild(modal);
         }
+
+        // Add global backdrop click handler
+        document.getElementById('modalBackdrop').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                this.hideModal();
+            }
+        });
     }
 
     renderCategories() {
@@ -98,6 +146,9 @@ class FoodSelector {
             categoryList.querySelector('.category-item')?.classList.add('active');
             this.renderFoodList();
         }
+
+        // Refresh event listeners after updating the DOM
+        this.refreshEventListeners();
     }
 
     renderFoodList() {
@@ -306,18 +357,17 @@ class FoodSelector {
     }
 
     setupEventListeners() {
-        // Add Food button handlers (both desktop and mobile)
+        // Add Food button handlers
         const addFoodBtn = document.querySelector('.add-food-btn');
         const addFoodBtnMobile = document.querySelector('.add-food-btn-mobile');
 
-        const showAddFoodModal = () => this.showAddFoodModal();
+        // Remove any existing listeners first
+        addFoodBtn?.removeEventListener('click', this.boundShowAddFoodModal);
+        addFoodBtnMobile?.removeEventListener('click', this.boundShowAddFoodModal);
 
-        if (addFoodBtn) {
-            addFoodBtn.addEventListener('click', showAddFoodModal);
-        }
-        if (addFoodBtnMobile) {
-            addFoodBtnMobile.addEventListener('click', showAddFoodModal);
-        }
+        // Add new listeners
+        addFoodBtn?.addEventListener('click', this.boundShowAddFoodModal);
+        addFoodBtnMobile?.addEventListener('click', this.boundShowAddFoodModal);
 
         // Search functionality
         const searchInput = document.getElementById('foodSearch');
@@ -415,11 +465,25 @@ class FoodSelector {
     }
 
     showAddFoodModal() {
-        // First, clean up any existing modals
-        this.hideModal();
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('addFoodModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'addFoodModal';
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+        }
 
-        const modal = document.createElement('div');
-        modal.className = 'modal';
+        // Create backdrop if it doesn't exist
+        let backdrop = document.getElementById('modalBackdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.id = 'modalBackdrop';
+            backdrop.className = 'modal-backdrop';
+            document.body.appendChild(backdrop);
+        }
+
+        // Set modal content
         modal.innerHTML = `
             <div class="modal-content">
                 <h3>Add New Food Item</h3>
@@ -456,15 +520,19 @@ class FoodSelector {
                     <input type="number" id="carbs" value="0" min="0" step="0.1">
                 </div>
                 <div class="modal-buttons">
-                    <button class="btn btn-primary" id="saveNewFoodBtn">Save</button>
-                    <button class="btn" id="cancelNewFoodBtn">Cancel</button>
+                    <button class="btn btn-primary" id="saveFoodBtn">Save</button>
+                    <button class="btn" id="cancelFoodBtn">Cancel</button>
                 </div>
             </div>
         `;
 
+        // Show modal and backdrop
+        modal.classList.add('show');
+        backdrop.style.display = 'block';
+
         // Add event listeners
-        const saveBtn = modal.querySelector('#saveNewFoodBtn');
-        const cancelBtn = modal.querySelector('#cancelNewFoodBtn');
+        const saveBtn = modal.querySelector('#saveFoodBtn');
+        const cancelBtn = modal.querySelector('#cancelFoodBtn');
         const categorySelect = modal.querySelector('#categorySelect');
         const newCategoryGroup = modal.querySelector('#newCategoryGroup');
 
@@ -474,19 +542,25 @@ class FoodSelector {
                 categorySelect.value === 'new' ? 'block' : 'none';
         });
 
-        const handleSave = () => {
+        saveBtn.addEventListener('click', () => {
             let categoryKey = categorySelect.value;
             const newCategoryName = document.getElementById('newCategoryName')?.value.trim();
             const foodName = document.getElementById('foodName').value.trim();
             const calories = parseFloat(document.getElementById('calories').value);
-            const protein = parseFloat(document.getElementById('protein').value);
-            const fat = parseFloat(document.getElementById('fat').value);
-            const carbs = parseFloat(document.getElementById('carbs').value);
+            const protein = parseFloat(document.getElementById('protein').value) || 0;
+            const fat = parseFloat(document.getElementById('fat').value) || 0;
+            const carbs = parseFloat(document.getElementById('carbs').value) || 0;
 
             if (!foodName || !calories) {
                 alert('Please fill in all required fields');
                 return;
             }
+
+            // Format the food name properly
+            const formattedName = foodName
+                .split(/[\s_]+/)
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
 
             if (categoryKey === 'new') {
                 if (!newCategoryName) {
@@ -501,22 +575,11 @@ class FoodSelector {
                 };
             }
 
-            this.saveNewFood(categoryKey, foodName, calories, protein, fat, carbs);
+            this.addNewFood(formattedName, calories, protein, fat, carbs, categoryKey);
             this.hideModal();
-        };
+        });
 
-        saveBtn.addEventListener('click', handleSave);
         cancelBtn.addEventListener('click', () => this.hideModal());
-
-        // Show the modal
-        document.body.appendChild(modal);
-        modal.classList.add('show');
-        
-        // Show backdrop
-        const backdrop = document.getElementById('modalBackdrop');
-        if (backdrop) {
-            backdrop.style.display = 'block';
-        }
     }
 
     renderCategoryOptions() {
@@ -529,38 +592,57 @@ class FoodSelector {
         return options;
     }
 
-    saveNewFood(categoryKey, foodName, calories, protein, fat, carbs) {
+    addNewFood(foodName, calories, protein, fat, carbs, categoryKey) {
         if (!foodName || !calories || isNaN(calories)) {
             alert('Please fill in all fields correctly');
             return;
         }
 
-        // Add new food to category
-        const foodKey = foodName.toLowerCase().replace(/\s+/g, '_');
-        this.foodData[categoryKey].items[foodKey] = {
-            name: foodName,
-            calories: parseFloat(calories),
-            protein: parseFloat(protein),
-            fat: parseFloat(fat),
-            carbs: parseFloat(carbs)
-        };
+        // Format the food name properly
+        const formattedName = foodName
+            .split(/[\s_]+/)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
 
-        // Save to localStorage
-        utils.storage.set('foodData', this.foodData);
+        // Create the storage key using the formatted name
+        const foodKey = formattedName;
 
-        // Update display
-        this.renderCategories();
-        this.selectedCategory = categoryKey;
-        this.renderFoodList();
+        try {
+            // Add new food to category
+            this.foodData[categoryKey].items[foodKey] = {
+                name: formattedName,
+                calories: parseFloat(calories),
+                protein: parseFloat(protein),
+                fat: parseFloat(fat),
+                carbs: parseFloat(carbs)
+            };
 
-        // Close modal properly
-        this.hideModal();
+            // Check and remove empty categories
+            this.removeEmptyCategories();
+
+            // Save to localStorage
+            utils.storage.set('foodData', this.foodData);
+
+            // Update display
+            this.renderCategories();
+            this.selectedCategory = categoryKey;
+            this.renderFoodList();
+
+            // Close modal properly
+            this.hideModal();
+        } catch (error) {
+            console.error('Error adding new food:', error);
+            alert('Error adding new food. Please try again.');
+        }
     }
 
     hideModal() {
-        // Remove any existing modals
+        // Hide all modals
         const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => modal.remove());
+        modals.forEach(modal => {
+            modal.classList.remove('show');
+            modal.innerHTML = '';
+        });
         
         // Hide backdrop
         const backdrop = document.getElementById('modalBackdrop');
@@ -597,10 +679,17 @@ class FoodSelector {
     }
 
     showEditFoodModal(categoryKey, foodKey) {
+        // Create edit modal if it doesn't exist
+        let modal = document.getElementById('editFoodModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'editFoodModal';
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+        }
+
         const food = this.foodData[categoryKey].items[foodKey];
         
-        const modal = document.createElement('div');
-        modal.className = 'modal';
         modal.innerHTML = `
             <div class="modal-content">
                 <h3>Edit Food Item</h3>
@@ -633,33 +722,77 @@ class FoodSelector {
             </div>
         `;
 
+        // Add event listeners
         const saveBtn = modal.querySelector('#saveEditFoodBtn');
         const deleteBtn = modal.querySelector('#deleteFoodBtn');
-        const cancelBtn = modal.querySelector('#cancelEditFoodBtn');
         const confirmDeleteBtn = modal.querySelector('#confirmDeleteBtn');
+        const cancelBtn = modal.querySelector('#cancelEditFoodBtn');
 
         saveBtn.addEventListener('click', () => {
             const newName = document.getElementById('editFoodName').value.trim();
             const newCalories = parseFloat(document.getElementById('editCalories').value);
-            const newProtein = parseFloat(document.getElementById('editProtein').value);
-            const newFat = parseFloat(document.getElementById('editFat').value);
-            const newCarbs = parseFloat(document.getElementById('editCarbs').value);
+            const newProtein = parseFloat(document.getElementById('editProtein').value) || 0;
+            const newFat = parseFloat(document.getElementById('editFat').value) || 0;
+            const newCarbs = parseFloat(document.getElementById('editCarbs').value) || 0;
 
             if (!newName || !newCalories) {
                 alert('Please fill in all required fields');
                 return;
             }
 
-            this.foodData[categoryKey].items[foodKey] = {
-                name: newName,
-                calories: newCalories,
-                protein: newProtein,
-                fat: newFat,
-                carbs: newCarbs
-            };
+            // Format the new name
+            const formattedName = newName
+                .split(/[\s_]+/)
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
 
+            // If name changed, we need to create a new key and delete the old one
+            if (formattedName !== foodKey) {
+                // Create new entry with the new name
+                this.foodData[categoryKey].items[formattedName] = {
+                    name: formattedName,
+                    calories: newCalories,
+                    protein: newProtein,
+                    fat: newFat,
+                    carbs: newCarbs
+                };
+                
+                // Delete the old entry
+                delete this.foodData[categoryKey].items[foodKey];
+
+                // Update any current meal references
+                if (window.currentMeal[foodKey]) {
+                    const amount = window.currentMeal[foodKey];
+                    window.currentMeal[formattedName] = amount;
+                    delete window.currentMeal[foodKey];
+                    localStorage.setItem('currentMeal', JSON.stringify(window.currentMeal));
+                }
+
+                // Update any selected foods references
+                if (app.state.selectedFoods && app.state.selectedFoods[foodKey]) {
+                    app.state.selectedFoods[formattedName] = app.state.selectedFoods[foodKey];
+                    delete app.state.selectedFoods[foodKey];
+                    this.saveSelectedFoods();
+                }
+            } else {
+                // Just update the existing entry
+                this.foodData[categoryKey].items[foodKey] = {
+                    name: formattedName,
+                    calories: newCalories,
+                    protein: newProtein,
+                    fat: newFat,
+                    carbs: newCarbs
+                };
+            }
+
+            // Save to localStorage
             utils.storage.set('foodData', this.foodData);
+            
+            // Update all displays
+            this.renderCategories();
             this.renderFoodList();
+            this.renderSelectedFoods();
+            this.updateTotalCalories();
             this.hideModal();
         });
 
@@ -675,25 +808,15 @@ class FoodSelector {
         });
 
         confirmDeleteBtn.addEventListener('click', () => {
-            delete this.foodData[categoryKey].items[foodKey];
-            utils.storage.set('foodData', this.foodData);
-            
-            // Check if category is empty and delete if it is
-            if (Object.keys(this.foodData[categoryKey].items).length === 0) {
-                delete this.foodData[categoryKey];
-                this.selectedCategory = Object.keys(this.foodData)[0] || null;
-                this.renderCategories();
-            }
-            
-            this.renderFoodList();
-            this.hideModal();
+            this.deleteFood(categoryKey, foodKey);
         });
 
         cancelBtn.addEventListener('click', () => this.hideModal());
 
-        document.body.appendChild(modal);
+        // Show modal
         modal.classList.add('show');
         
+        // Show backdrop
         const backdrop = document.getElementById('modalBackdrop');
         if (backdrop) {
             backdrop.style.display = 'block';
@@ -884,6 +1007,41 @@ class FoodSelector {
         });
 
         return results;
+    }
+
+    // Update refreshEventListeners to use the bound method
+    refreshEventListeners() {
+        // Add Food button handlers
+        const addFoodBtn = document.querySelector('.add-food-btn');
+        const addFoodBtnMobile = document.querySelector('.add-food-btn-mobile');
+
+        // Remove any existing listeners first
+        addFoodBtn?.removeEventListener('click', this.boundShowAddFoodModal);
+        addFoodBtnMobile?.removeEventListener('click', this.boundShowAddFoodModal);
+
+        // Add new listeners
+        addFoodBtn?.addEventListener('click', this.boundShowAddFoodModal);
+        addFoodBtnMobile?.addEventListener('click', this.boundShowAddFoodModal);
+    }
+
+    deleteFood(categoryKey, foodKey) {
+        if (this.foodData[categoryKey] && this.foodData[categoryKey].items[foodKey]) {
+            // Delete the food item
+            delete this.foodData[categoryKey].items[foodKey];
+            
+            // Check and remove empty categories
+            this.removeEmptyCategories();
+            
+            // Save to localStorage
+            utils.storage.set('foodData', this.foodData);
+            
+            // Hide any open modals first
+            this.hideModal();
+            
+            // Update display
+            this.renderCategories();
+            this.renderFoodList();
+        }
     }
 }
 
