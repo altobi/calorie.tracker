@@ -93,7 +93,7 @@ class MobileHandler {
                 if (logTitle) logTitle.style.display = 'block';
                 break;
             case 'settings':
-                if (settingsTitle) logTitle.style.display = 'block';
+                if (settingsTitle) settingsTitle.style.display = 'block';
                 break;
         }
     }
