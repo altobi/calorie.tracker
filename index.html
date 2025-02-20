@@ -104,16 +104,18 @@
                     <input type="number" id="dailyBudget" min="0" step="100" value="2000">
                     <span>cal</span>
                 </div>
-                <div class="calorie-progress">
-                    <svg class="progress-ring" width="120" height="120">
-                        <circle class="progress-ring-circle" cx="60" cy="60" r="54" 
-                                stroke-width="8" fill="transparent" />
-                        <circle class="progress-ring-value" cx="60" cy="60" r="54" 
-                                stroke-width="8" fill="transparent" />
-                    </svg>
-                    <div class="progress-text">
-                        <span id="caloriePercentage">0%</span>
-                        <span class="progress-label">of daily budget</span>
+                <div class="calorie-progress-container">
+                    <div class="progress-ring-wrapper">
+                        <svg class="progress-ring" width="140" height="140">
+                            <circle class="progress-ring-circle" cx="70" cy="70" r="64" 
+                                    stroke-width="8" fill="transparent" />
+                            <circle class="progress-ring-value" cx="70" cy="70" r="64" 
+                                    stroke-width="8" fill="transparent" />
+                        </svg>
+                        <div class="progress-text">
+                            <span id="caloriePercentage">0%</span>
+                            <span class="progress-label">of daily budget</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -164,10 +166,7 @@
                 <p class="setting-description">
                     Download your meal log history
                 </p>
-            </div>
-
-            <div class="settings-group">
-                <h3>Data Management</h3>
+                <div class="settings-divider"></div>
                 <button class="btn btn-danger" onclick="settingsManager.confirmClearData()">
                     Reset to Defaults
                 </button>
@@ -178,16 +177,12 @@
 
             <div class="settings-group mobile-only">
                 <h3>Mobile Options</h3>
-                <div class="setting-item">
-                    <div class="setting-item-content">
-                        <button class="btn btn-primary" id="addToHomeBtn">
-                            Add to Home Screen
-                        </button>
-                        <p class="setting-description">
-                            Create a shortcut to quickly access this app from your home screen
-                        </p>
-                    </div>
-                </div>
+                <button class="btn btn-primary" id="addToHomeBtn">
+                    Add to Home Screen
+                </button>
+                <p class="setting-description">
+                    Create a shortcut to quickly access this app from your home screen
+                </p>
             </div>
 
             <div class="settings-footer">

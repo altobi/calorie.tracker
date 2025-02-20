@@ -6,8 +6,24 @@ class MobileHandler {
 
     init() {
         this.populateCategorySelect();
-        this.setupDateSelector();
         this.updatePageTitle(document.body.dataset.page || 'calculator');
+        
+        // Setup date selector when page loads or changes
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.page === 'log') {
+                    // Wait for page transition
+                    setTimeout(() => {
+                        this.setupDateSelector();
+                    }, 100);
+                }
+            });
+        });
+
+        // Initial setup
+        if (document.body.dataset.page === 'log') {
+            this.setupDateSelector();
+        }
     }
 
     setupEventListeners() {
@@ -91,7 +107,10 @@ class MobileHandler {
 
     handleFoodSelection(foodKey) {
         const preview = document.getElementById('selectedFoodPreview');
-        if (!preview || !foodKey) {
+        if (!preview) return;
+        
+        if (!foodKey) {
+            preview.classList.remove('show');
             preview.innerHTML = '';
             return;
         }
@@ -118,14 +137,17 @@ class MobileHandler {
                 </button>
             </div>
         `;
+        preview.classList.add('show');
     }
 
     addFoodToMeal(categoryKey, foodKey) {
         if (window.foodSelector) {
             window.foodSelector.addFoodToSelected(categoryKey, foodKey);
-            // Clear selections
+            // Clear selections and hide preview
             document.getElementById('mobileFoodSelect').value = '';
-            document.getElementById('selectedFoodPreview').innerHTML = '';
+            const preview = document.getElementById('selectedFoodPreview');
+            preview.classList.remove('show');
+            preview.innerHTML = '';
         }
     }
 
@@ -160,6 +182,9 @@ class MobileHandler {
                 </div>
             `;
         }).join('');
+
+        // Ensure the active date is centered
+        this.centerActiveDate();
     }
 
     handleDateSelection(dateString) {
@@ -170,16 +195,17 @@ class MobileHandler {
         // Update meal log to show selected date's entries
         if (window.mealLogger) {
             const selectedDate = new Date(dateString);
-            const today = new Date();
             
             // Update calorie budget display
             const budget = localStorage.getItem('calorieBudget') || 2000;
             document.getElementById('dailyBudget').value = budget;
             
-            // Filter meals for selected date
-            const meals = window.mealLogger.mealLog.filter(meal => 
-                meal.date === dateString
-            );
+            // Filter meals for the selected date
+            const selectedDateStr = selectedDate.toISOString().split('T')[0];
+            const meals = window.mealLogger.mealLog.filter(meal => {
+                const mealDate = new Date(meal.timestamp).toISOString().split('T')[0];
+                return mealDate === selectedDateStr;
+            });
             
             // Calculate total calories for the day
             const totalCalories = meals.reduce((sum, meal) => sum + meal.totalCalories, 0);
@@ -200,14 +226,66 @@ class MobileHandler {
             document.getElementById('caloriePercentage').textContent = `${Math.round(percentage)}%`;
             
             // Update meal log display
-            window.mealLogger.renderMealLog(meals);
+            const mealLogEntries = document.querySelector('.meal-log-entries');
+            if (mealLogEntries) {
+                mealLogEntries.innerHTML = '';
+                
+                if (meals.length > 0) {
+                    meals.forEach(meal => {
+                        const mealTime = new Date(meal.timestamp).toLocaleTimeString([], { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                        
+                        const mealHtml = `
+                            <div class="meal-entry">
+                                <div class="meal-entry-header">
+                                    <span class="meal-time">${mealTime}</span>
+                                    <span class="meal-calories">${meal.totalCalories} cal</span>
+                                </div>
+                                <div class="meal-items">
+                                    ${meal.items.map(item => `
+                                        <div class="meal-item">
+                                            <span class="item-name">${item.name}</span>
+                                            <span class="item-amount">${item.grams}g (${item.calories} cal)</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                        mealLogEntries.innerHTML += mealHtml;
+                    });
+                } else {
+                    mealLogEntries.innerHTML = `
+                        <div class="no-meals">
+                            No meals logged for this date
+                        </div>
+                    `;
+                }
+            }
         }
     }
 
     getColorForPercentage(percentage) {
-        // Implement your logic to determine the color based on the percentage
-        // This is a placeholder and should be replaced with your actual implementation
-        return 'black';
+        if (percentage <= 50) return '#4CAF50';  // Green
+        if (percentage <= 75) return '#FFC107';  // Yellow
+        if (percentage <= 90) return '#FF9800';  // Orange
+        return '#F44336';  // Red
+    }
+
+    // Separate method for centering
+    centerActiveDate() {
+        // Wait for the DOM to be fully rendered and measurements to be accurate
+        setTimeout(() => {
+            const dateList = document.querySelector('.date-list');
+            const activeDate = dateList?.querySelector('.date-item.active');
+            
+            if (dateList && activeDate) {
+                // Calculate the scroll position to center the active date
+                const scrollOffset = activeDate.offsetLeft - (dateList.offsetWidth / 2) + (activeDate.offsetWidth / 2);
+                dateList.scrollLeft = scrollOffset;
+            }
+        }, 100);
     }
 }
 

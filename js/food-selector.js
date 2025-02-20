@@ -291,17 +291,9 @@ class FoodSelector {
     }
 
     updateTotalCalories() {
-        let total = 0;
-        
-        Object.entries(window.currentMeal).forEach(([foodKey, grams]) => {
-            total += this.calculateCalories(foodKey, grams);
-        });
-
-        // Only update the total calories in the footer
-        const totalCaloriesSpan = document.querySelector('.common-foods-footer .total-calories #totalCalories');
-        if (totalCaloriesSpan) {
-            totalCaloriesSpan.textContent = total;
-        }
+        const total = this.calculateTotalCalories();
+        const totalGrams = Object.values(window.currentMeal).reduce((sum, amount) => sum + Number(amount), 0);
+        document.getElementById('totalCalories').textContent = `${total} cal (${totalGrams}g)`;
     }
 
     findFoodByKey(foodKey) {
@@ -374,64 +366,37 @@ class FoodSelector {
         });
     }
 
-    handleSearch(query) {
+    handleSearch(searchTerm) {
         const searchResults = document.getElementById('searchResults');
-        searchResults.innerHTML = '';
+        if (!searchResults) return;
 
-        if (!query.trim()) {
+        if (!searchTerm) {
             searchResults.style.display = 'none';
+            searchResults.innerHTML = '';
             return;
         }
 
-        const results = [];
-        const searchTerm = query.toLowerCase();
-
-        // Search through all categories and their items
-        Object.entries(this.foodData).forEach(([categoryKey, category]) => {
-            Object.entries(category.items).forEach(([foodKey, food]) => {
-                // Search by food key (name) since that's how we store it
-                if (foodKey.toLowerCase().includes(searchTerm)) {
-                    results.push({
-                        categoryKey,
-                        foodKey,
-                        name: foodKey,
-                        calories: food.calories
-                    });
-                }
-            });
-        });
-
+        const results = this.searchFoods(searchTerm);
         if (results.length > 0) {
-            results.forEach(result => {
-                const li = document.createElement('li');
-                li.className = 'search-result-item';
-                li.innerHTML = `
-                    <span class="food-name">${result.name}</span>
-                    <span class="food-calories">${result.calories} cal/100g</span>
-                `;
-                li.addEventListener('click', () => {
-                    this.selectCategory(result.categoryKey);
-                    searchResults.style.display = 'none';
-                    // Clear search input
-                    document.getElementById('foodSearch').value = '';
-                    
-                    // Highlight the found item
-                    setTimeout(() => {
-                        const foodItem = document.querySelector(`[data-food-key="${result.foodKey}"]`);
-                        if (foodItem) {
-                            foodItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            foodItem.classList.add('highlight');
-                            setTimeout(() => foodItem.classList.remove('highlight'), 2000);
-                        }
-                    }, 100);
-                });
-                searchResults.appendChild(li);
-            });
+            searchResults.innerHTML = results.map(food => `
+                <li onclick="foodSelector.addFoodFromSearch('${food.category}', '${food.key}')">
+                    ${food.name} (${food.calories} cal/100g)
+                </li>
+            `).join('');
             searchResults.style.display = 'block';
         } else {
             searchResults.innerHTML = '<li class="no-results">No matching foods found</li>';
             searchResults.style.display = 'block';
         }
+    }
+
+    addFoodFromSearch(categoryKey, foodKey) {
+        this.addFoodToSelected(categoryKey, foodKey);
+        // Clear search
+        const searchInput = document.getElementById('foodSearch');
+        const searchResults = document.getElementById('searchResults');
+        if (searchInput) searchInput.value = '';
+        if (searchResults) searchResults.innerHTML = '';
     }
 
     updateFoodItemSelect() {
@@ -852,6 +817,71 @@ class FoodSelector {
             }
         }
         return null;
+    }
+
+    renderSelectedFoods() {
+        const container = document.getElementById('selectedFoods');
+        if (!container) return;
+
+        container.innerHTML = '';
+        Object.entries(window.currentMeal).forEach(([foodKey, amount]) => {
+            const food = this.findFoodByKey(foodKey);
+            if (food) {
+                const calories = this.calculateCalories(foodKey, amount);
+                container.innerHTML += `
+                    <div class="selected-food-item" data-food-key="${foodKey}">
+                        <div class="food-info">
+                            <span class="food-name">${foodKey} (grams) - ${food.calories} cal/100g</span>
+                            <span class="food-amount">${amount}g (${calories} cal)</span>
+                        </div>
+                        <div class="food-controls">
+                            <button class="btn btn-icon" onclick="foodSelector.removeFoodFromSelected('${foodKey}')">
+                                <span class="material-icons">remove</span>
+                            </button>
+                            <input type="number" value="${amount}" min="0" step="10"
+                                onchange="foodSelector.updateFoodAmount('${foodKey}', this.value)">
+                            <button class="btn btn-icon" onclick="foodSelector.editFoodItem('${foodKey}')">
+                                <span class="material-icons">edit</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // Update total calories with unit
+        const total = this.calculateTotalCalories();
+        const totalGrams = Object.values(window.currentMeal).reduce((sum, amount) => sum + Number(amount), 0);
+        document.getElementById('totalCalories').textContent = `${total} cal (${totalGrams} g)`;
+    }
+
+    // Add this method for calculating total calories
+    calculateTotalCalories() {
+        return Object.entries(window.currentMeal).reduce((total, [foodKey, amount]) => {
+            return total + this.calculateCalories(foodKey, amount);
+        }, 0);
+    }
+
+    // Add this method for searching foods
+    searchFoods(searchTerm) {
+        const results = [];
+        const term = searchTerm.toLowerCase();
+
+        // Search through all categories and their items
+        Object.entries(this.foodData).forEach(([categoryKey, category]) => {
+            Object.entries(category.items).forEach(([foodKey, food]) => {
+                if (foodKey.toLowerCase().includes(term)) {
+                    results.push({
+                        category: categoryKey,
+                        key: foodKey,
+                        name: foodKey,
+                        calories: food.calories
+                    });
+                }
+            });
+        });
+
+        return results;
     }
 }
 
