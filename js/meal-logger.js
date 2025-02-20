@@ -12,11 +12,21 @@ class MealLogger {
     }
 
     loadMealLog() {
+        console.log('Loading meal log');
         const savedLog = localStorage.getItem('mealLog');
-        this.mealLog = savedLog ? JSON.parse(savedLog) : [];
+        if (savedLog) {
+            try {
+                this.mealLog = JSON.parse(savedLog);
+                console.log('Loaded meal log:', this.mealLog);
+            } catch (e) {
+                console.error('Error loading meal log:', e);
+                this.mealLog = [];
+            }
+        }
     }
 
     saveMealLog() {
+        console.log('Saving meal log:', this.mealLog);
         localStorage.setItem('mealLog', JSON.stringify(this.mealLog));
         this.updateCalorieProgress();
     }
@@ -260,13 +270,13 @@ class MealLogger {
         });
     }
 
-    editMeal(mealId) {
-        const meal = this.mealLog.find(m => m.id === mealId);
+    editMeal(id) {
+        const meal = this.mealLog.find(m => m.id === id);
         if (!meal) return;
 
         // Create a deep copy of the meal for editing
         const editingMeal = JSON.parse(JSON.stringify(meal));
-        this.currentEditingMealId = mealId;
+        this.currentEditingMealId = id;
 
         const modal = document.createElement('div');
         modal.className = 'modal';
@@ -314,7 +324,16 @@ class MealLogger {
             meal.totalCalories = editingMeal.totalCalories;
 
             this.saveMealLog();
-            this.renderMealLog();
+            
+            // Check if we're on mobile
+            if (window.innerWidth <= 768) {
+                const activeDate = document.querySelector('.date-item.active');
+                if (activeDate && window.mobileHandler) {
+                    window.mobileHandler.handleDateSelection(activeDate.dataset.date);
+                }
+            } else {
+                this.renderMealLog();
+            }
             this.hideModal();
             this.updateCalorieProgress();
             this.currentEditingMealId = null;
@@ -398,29 +417,26 @@ class MealLogger {
         }
     }
 
-    deleteMeal(mealId) {
-        // Remove the meal from the array
-        this.mealLog = this.mealLog.filter(meal => meal.id !== mealId);
-        
-        // Save to localStorage
-        this.saveMealLog();
-        
-        // Re-render the meal log
-        this.renderMealLog();
-        
-        // Update the calorie progress
-        this.updateCalorieProgress();
-        
-        // Remove the meal entry from DOM immediately
-        const mealElement = document.querySelector(`[data-meal-id="${mealId}"]`);
-        if (mealElement) {
-            const dateSection = mealElement.closest('.meal-log-date');
-            mealElement.remove();
-            
-            // If this was the last meal in the date section, remove the section
-            if (dateSection && !dateSection.querySelector('.meal-entry')) {
-                dateSection.remove();
+    deleteMeal(id) {
+        console.log('Deleting meal with ID:', id); // Debug log
+        const index = this.mealLog.findIndex(meal => meal.id === Number(id));
+        if (index !== -1) {
+            this.mealLog.splice(index, 1);
+            this.saveMealLog();
+
+            // Check if we're on mobile
+            if (window.innerWidth <= 768) {
+                // Get the currently selected date
+                const activeDate = document.querySelector('.date-item.active');
+                if (activeDate && window.mobileHandler) {
+                    window.mobileHandler.handleDateSelection(activeDate.dataset.date);
+                }
+            } else {
+                // Desktop rendering
+                this.renderMealLog();
             }
+        } else {
+            console.error('Meal not found with ID:', id);
         }
     }
 
@@ -507,7 +523,27 @@ class MealLogger {
             document.querySelector('.meal-log-toggle-btn')?.classList.add('collapsed');
         }
     }
+
+    addMeal(meal) {
+        console.log('Adding meal:', meal); // Debug log
+        const date = new Date();
+        meal.timestamp = date.toISOString();
+        meal.date = date.toISOString().split('T')[0];
+
+        // Ensure meal.items is an array
+        if (meal.items && !Array.isArray(meal.items)) {
+            meal.items = Object.entries(meal.items).map(([name, details]) => ({
+                name: name,
+                grams: details.grams || details.amount,
+                calories: details.calories
+            }));
+        }
+
+        this.mealLog.push(meal);
+        console.log('Updated meal log:', this.mealLog); // Debug log
+        this.saveMealLog();
+    }
 }
 
 // Initialize meal logger
-const mealLogger = new MealLogger(); 
+window.mealLogger = new MealLogger(); 

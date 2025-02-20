@@ -766,40 +766,42 @@ class FoodSelector {
     }
 
     logCurrentMeal() {
+        if (Object.keys(window.currentMeal).length === 0) return;
+
         const mealItems = [];
         let totalCalories = 0;
 
+        console.log('Current meal before logging:', window.currentMeal); // Debug log
+
+        // Convert current meal format to meal log format
         for (const [foodKey, grams] of Object.entries(window.currentMeal)) {
             const calories = this.calculateCalories(foodKey, grams);
             mealItems.push({
                 name: foodKey,
-                grams: grams,
+                grams: Number(grams),
                 calories: calories
             });
             totalCalories += calories;
         }
 
-        if (mealItems.length > 0) {
-            const meal = {
-                items: mealItems,
-                totalCalories: totalCalories,
-                timestamp: new Date().toISOString()
-            };
+        const meal = {
+            items: mealItems,
+            totalCalories: totalCalories,
+            timestamp: new Date().toISOString(),
+            date: new Date().toISOString().split('T')[0]
+        };
 
-            mealLogger.addMeal(meal);
+        console.log('Meal being logged:', meal); // Debug log
 
-            // Clear UI and storage
-            const selectedFoods = document.getElementById('selectedFoods');
-            if (selectedFoods) {
-                const items = selectedFoods.querySelectorAll('.selected-food-item');
-                items.forEach(item => item.remove());
-            }
-
-            // Reset state and storage
-            window.currentMeal = {};
-            localStorage.removeItem('currentMeal');
-            this.updateTotalCalories();
+        if (window.mealLogger) {
+            window.mealLogger.addMeal(meal);
         }
+
+        // Clear current meal
+        window.currentMeal = {};
+        localStorage.removeItem('currentMeal');
+        this.updateTotalCalories();
+        this.renderSelectedFoods();
     }
 
     // Single source of truth for calorie calculation

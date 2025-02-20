@@ -156,6 +156,7 @@ class MobileHandler {
         if (!dateList) return;
 
         const today = new Date();
+        const todayString = today.toISOString().split('T')[0];
         const dates = [];
 
         // Generate dates for the last week and next week
@@ -174,95 +175,157 @@ class MobileHandler {
         // Create date items
         dateList.innerHTML = dates.map(date => {
             const isToday = date.toDateString() === today.toDateString();
+            const dateString = date.toISOString().split('T')[0];
             return `
                 <div class="date-item ${isToday ? 'active' : ''}" 
-                     data-date="${date.toISOString().split('T')[0]}">
+                     data-date="${dateString}">
                     <span class="date-weekday">${date.toLocaleString('default', { weekday: 'short' })}</span>
                     <span class="date-day">${date.getDate()}</span>
                 </div>
             `;
         }).join('');
 
-        // Ensure the active date is centered
+        // Center the active date
         this.centerActiveDate();
+
+        // Show today's meals
+        this.handleDateSelection(todayString);
     }
 
     handleDateSelection(dateString) {
+        console.log('Date selected:', dateString);
+        console.log('MealLogger exists:', !!window.mealLogger);
+        console.log('MealLog exists:', !!window.mealLogger?.mealLog);
+        console.log('Current mealLog:', window.mealLogger?.mealLog);
+
+        // Update active state of date items
         document.querySelectorAll('.date-item').forEach(item => {
             item.classList.toggle('active', item.dataset.date === dateString);
         });
 
-        // Update meal log to show selected date's entries
-        if (window.mealLogger) {
-            const selectedDate = new Date(dateString);
-            
-            // Update calorie budget display
-            const budget = localStorage.getItem('calorieBudget') || 2000;
-            document.getElementById('dailyBudget').value = budget;
-            
-            // Filter meals for the selected date
-            const selectedDateStr = selectedDate.toISOString().split('T')[0];
-            const meals = window.mealLogger.mealLog.filter(meal => {
-                const mealDate = new Date(meal.timestamp).toISOString().split('T')[0];
-                return mealDate === selectedDateStr;
-            });
-            
-            // Calculate total calories for the day
-            const totalCalories = meals.reduce((sum, meal) => sum + meal.totalCalories, 0);
-            const percentage = Math.min((totalCalories / budget) * 100, 100);
-            
-            // Update progress ring
-            const circle = document.querySelector('.progress-ring-value');
-            if (circle) {
-                const radius = circle.r.baseVal.value;
-                const circumference = radius * 2 * Math.PI;
-                const offset = circumference - (percentage / 100 * circumference);
-                circle.style.strokeDasharray = `${circumference} ${circumference}`;
-                circle.style.strokeDashoffset = offset;
-                circle.style.stroke = this.getColorForPercentage(percentage);
+        if (!window.mealLogger || !window.mealLogger.mealLog) {
+            console.log('No mealLogger or mealLog found');
+            return;
+        }
+
+        // Get meals for the selected date
+        const selectedMeals = window.mealLogger.mealLog.filter(meal => {
+            try {
+                // Get just the date part from the meal timestamp
+                const mealDate = meal.date || meal.timestamp.split('T')[0];
+                console.log('Comparing dates:', mealDate, dateString);
+                return mealDate === dateString;
+            } catch (e) {
+                console.error('Error comparing dates:', e);
+                return false;
             }
-            
+        });
+
+        console.log('Selected meals:', selectedMeals);
+
+        // Update calorie budget display
+        const budget = parseInt(localStorage.getItem('calorieBudget')) || 2000;
+
+        // Calculate total calories for the selected date
+        const totalCalories = selectedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0);
+        const percentage = Math.min((totalCalories / budget) * 100, 100);
+
+        // Update progress ring
+        const circle = document.querySelector('.progress-ring-value');
+        if (circle) {
+            const radius = circle.r.baseVal.value;
+            const circumference = radius * 2 * Math.PI;
+            const offset = circumference - (percentage / 100 * circumference);
+            circle.style.strokeDasharray = `${circumference} ${circumference}`;
+            circle.style.strokeDashoffset = offset;
+            circle.style.stroke = this.getColorForPercentage(percentage);
+
             // Update percentage text
-            document.getElementById('caloriePercentage').textContent = `${Math.round(percentage)}%`;
-            
-            // Update meal log display
-            const mealLogEntries = document.querySelector('.meal-log-entries');
-            if (mealLogEntries) {
-                mealLogEntries.innerHTML = '';
-                
-                if (meals.length > 0) {
-                    meals.forEach(meal => {
-                        const mealTime = new Date(meal.timestamp).toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                        });
-                        
-                        const mealHtml = `
-                            <div class="meal-entry">
-                                <div class="meal-entry-header">
-                                    <span class="meal-time">${mealTime}</span>
-                                    <span class="meal-calories">${meal.totalCalories} cal</span>
+            const percentageText = document.getElementById('caloriePercentage');
+            if (percentageText) {
+                percentageText.textContent = `${Math.round(percentage)}%`;
+            }
+        }
+
+        // Update meal log entries
+        const mealLogEntries = document.querySelector('.meal-log-entries');
+        const isMobile = window.innerWidth <= 768;
+
+        if (mealLogEntries && isMobile) {
+            if (selectedMeals.length > 0) {
+                const mealHtml = selectedMeals.map(meal => {
+                    console.log('Processing meal for delete:', meal); // Debug log to see meal structure
+                    const mealType = meal.type ? meal.type.charAt(0).toUpperCase() + meal.type.slice(1) : '';
+                    
+                    // Handle different meal item structures
+                    let itemsHtml = '';
+                    if (meal.items) {
+                        if (Array.isArray(meal.items)) {
+                            itemsHtml = meal.items.map(item => `
+                                <div class="meal-item">
+                                    <span class="item-name">${item.name}</span>
+                                    <span class="item-amount">${item.grams}g (${item.calories} cal)</span>
                                 </div>
-                                <div class="meal-items">
-                                    ${meal.items.map(item => `
-                                        <div class="meal-item">
-                                            <span class="item-name">${item.name}</span>
-                                            <span class="item-amount">${item.grams}g (${item.calories} cal)</span>
-                                        </div>
-                                    `).join('')}
+                            `).join('');
+                        } else if (typeof meal.items === 'object') {
+                            // If items is an object (key-value pairs)
+                            itemsHtml = Object.entries(meal.items).map(([name, item]) => `
+                                <div class="meal-item">
+                                    <span class="item-name">${name}</span>
+                                    <span class="item-amount">${item.grams || item.amount}g (${item.calories} cal)</span>
+                                </div>
+                            `).join('');
+                        }
+                    }
+
+                    return `
+                        <div class="meal-entry" data-meal-id="${meal.id}">
+                            <div class="meal-entry-header">
+                                <span class="meal-time">${mealType}</span>
+                                <div class="meal-actions">
+                                    <span class="meal-calories">${meal.totalCalories} cal</span>
+                                    <button class="btn btn-icon" onclick="window.mealLogger.editMeal(${meal.id})">
+                                        <span class="material-icons">edit</span>
+                                    </button>
+                                    <button class="btn btn-icon" onclick="window.mealLogger.deleteMeal(${meal.id})">
+                                        <span class="material-icons">delete</span>
+                                    </button>
                                 </div>
                             </div>
-                        `;
-                        mealLogEntries.innerHTML += mealHtml;
-                    });
-                } else {
-                    mealLogEntries.innerHTML = `
-                        <div class="no-meals">
-                            No meals logged for this date
+                            <div class="meal-items">
+                                ${itemsHtml}
+                            </div>
                         </div>
                     `;
+                }).join('');
+
+                mealLogEntries.innerHTML = mealHtml;
+            } else {
+                // Format the "no meals" date
+                let formattedDate = dateString;
+                try {
+                    const date = new Date(dateString);
+                    if (!isNaN(date.getTime())) { // Check if date is valid
+                        formattedDate = date.toLocaleDateString(undefined, {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error formatting date:', e);
                 }
+                
+                mealLogEntries.innerHTML = `
+                    <div class="no-meals">
+                        <p>No meals logged for ${formattedDate}</p>
+                    </div>
+                `;
             }
+        } else if (!isMobile) {
+            // On desktop, let the original meal logger handle it
+            window.mealLogger.renderMealLog();
         }
     }
 
@@ -292,4 +355,29 @@ class MobileHandler {
 // Initialize mobile handler after DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.mobileHandler = new MobileHandler();
-}); 
+});
+
+// Add a resize handler to switch rendering modes
+window.addEventListener('resize', utils.debounce(() => {
+    const isMobile = window.innerWidth <= 768;
+    if (document.body.dataset.page === 'log') {
+        if (isMobile) {
+            const activeDate = document.querySelector('.date-item.active');
+            if (activeDate) {
+                window.mobileHandler.handleDateSelection(activeDate.dataset.date);
+            }
+        } else {
+            // Reset to desktop view
+            const mealLogEntries = document.querySelector('.meal-log-entries');
+            if (mealLogEntries) {
+                mealLogEntries.innerHTML = ''; // Clear mobile styling
+                window.mealLogger.renderMealLog(); // Re-render with desktop styling
+            }
+            
+            // Remove any mobile-specific classes
+            document.querySelectorAll('.meal-entry').forEach(entry => {
+                entry.classList.remove('mobile-meal-entry');
+            });
+        }
+    }
+}, 250)); 

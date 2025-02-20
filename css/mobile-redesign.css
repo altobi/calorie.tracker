@@ -118,6 +118,10 @@
         padding: var(--spacing-md);
     }
 
+    .meal-log-header {
+        border-bottom: none;
+    }
+
     .meal-log-content {
         padding: 0;
     }
@@ -265,6 +269,161 @@
         padding: var(--spacing-md);
         margin-bottom: var(--spacing-md);
         width: 100%;
+    }
+
+    .meal-entry {
+        background: var(--card-background);
+        border-radius: var(--border-radius-md);
+        margin-bottom: var(--spacing-md);
+        overflow: hidden;
+    }
+
+    .meal-entry-header {
+        padding: var(--spacing-md);
+        background: var(--background-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .meal-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+
+    .meal-actions .btn-icon {
+        padding: var(--spacing-xs);
+        color: var(--text-secondary);
+        background: none;
+        border: none;
+        cursor: pointer;
+    }
+
+    .meal-actions .btn-icon:hover {
+        color: var(--text-color);
+    }
+
+    .meal-actions .btn-icon[onclick*="delete"]:hover {
+        color: var(--danger-color);
+    }
+
+    .meal-time {
+        font-weight: 500;
+        color: var(--text-color);
+    }
+
+    .meal-calories {
+        color: var(--primary-color);
+        font-weight: 500;
+        margin-right: var(--spacing-sm);
+    }
+
+    .meal-items {
+        padding: var(--spacing-md);
+    }
+
+    .meal-item {
+        display: flex;
+        justify-content: space-between;
+        padding: var(--spacing-sm) 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .meal-item:last-child {
+        border-bottom: none;
+    }
+
+    .item-name {
+        color: var(--text-color);
+    }
+
+    .item-amount {
+        color: var(--text-secondary);
+    }
+
+    .no-meals {
+        text-align: center;
+        padding: var(--spacing-lg);
+        color: var(--text-secondary);
+    }
+
+    /* Mobile-specific meal log styles */
+    .meal-log-entries .meal-entry {
+        background: var(--card-background);
+        border-radius: var(--border-radius-md);
+        margin-bottom: var(--spacing-md);
+        overflow: hidden;
+    }
+
+    .meal-log-entries .meal-entry-header {
+        padding: var(--spacing-md);
+        background: var(--background-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .meal-log-entries .meal-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+
+    .meal-log-entries .meal-actions .btn-icon {
+        padding: var(--spacing-xs);
+        color: var(--text-secondary);
+        background: none;
+        border: none;
+        cursor: pointer;
+    }
+
+    .meal-log-entries .meal-actions .btn-icon:hover {
+        color: var(--text-color);
+    }
+
+    .meal-log-entries .meal-actions .btn-icon[onclick*="delete"]:hover {
+        color: var(--danger-color);
+    }
+
+    .meal-log-entries .meal-time {
+        font-weight: 500;
+        color: var(--text-color);
+    }
+
+    .meal-log-entries .meal-calories {
+        color: var(--primary-color);
+        font-weight: 500;
+        margin-right: var(--spacing-sm);
+    }
+
+    .meal-log-entries .meal-items {
+        padding: var(--spacing-md);
+    }
+
+    .meal-log-entries .meal-item {
+        display: flex;
+        justify-content: space-between;
+        padding: var(--spacing-sm) 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .meal-log-entries .meal-item:last-child {
+        border-bottom: none;
+    }
+
+    .meal-log-entries .item-name {
+        color: var(--text-color);
+    }
+
+    .meal-log-entries .item-amount {
+        color: var(--text-secondary);
+    }
+
+    .meal-log-entries .no-meals {
+        text-align: center;
+        padding: var(--spacing-lg);
+        color: var(--text-secondary);
     }
 }
 
