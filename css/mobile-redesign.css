@@ -1,0 +1,184 @@
+/* Only apply these styles on mobile */
+@media screen and (max-width: 768px) {
+    /* Reset some base mobile styles */
+    .container {
+        display: block;
+        padding: 0;
+    }
+
+    /* Header styling */
+    .page-header {
+        position: relative;
+        padding: var(--spacing-md);
+        background: var(--card-background);
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: var(--spacing-md);
+    }
+
+    .page-header h1 {
+        font-size: 1.4rem;
+        text-align: center;
+        margin: 0;
+    }
+
+    /* Calculator Page */
+    .food-selector {
+        padding: var(--spacing-md);
+        box-shadow: none;
+        background: transparent;
+    }
+
+    .search-container {
+        margin-bottom: var(--spacing-lg);
+    }
+
+    /* Category and Food Selection */
+    .selector-lists {
+        display: none; /* Hide the original lists */
+    }
+
+    .mobile-selector {
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .mobile-selector select {
+        width: 100%;
+        height: 48px; /* Fixed height */
+        padding: 0 var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-md);
+        background: var(--card-background);
+        color: var(--text-color);
+        font-size: 1rem;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 12px;
+        padding-right: 32px;
+    }
+
+    .selected-food-preview {
+        display: none; /* Hide by default */
+        background: var(--card-background);
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+    }
+
+    .selected-food-preview.show {
+        display: block;
+    }
+
+    /* Current Meal Section */
+    .common-foods h2 {
+        text-align: center;
+        margin-bottom: var(--spacing-md);
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+    }
+
+    /* Meal Log Page */
+    .meal-log {
+        padding: var(--spacing-md);
+    }
+
+    .date-selector {
+        margin: 0;
+        margin-bottom: var(--spacing-md);
+        background: var(--card-background);
+    }
+
+    .month-label {
+        position: sticky;
+        top: 0;
+        padding: var(--spacing-md);
+        background: var(--card-background);
+        border-bottom: 1px solid var(--border-color);
+        z-index: 1;
+    }
+
+    .date-list {
+        padding: var(--spacing-md);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        display: flex;
+        gap: var(--spacing-sm);
+    }
+
+    .date-item {
+        flex: 0 0 60px;
+        height: 70px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: var(--background-color);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        padding: var(--spacing-sm);
+    }
+
+    .date-item.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .date-weekday {
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    .date-day {
+        font-size: 1.2rem;
+        font-weight: 500;
+    }
+
+    /* Settings Page */
+    .settings-title {
+        text-align: center;
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .settings-group {
+        background: var(--card-background);
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+    }
+
+    .settings-group h3 {
+        margin-bottom: var(--spacing-md);
+        color: var(--text-secondary);
+        font-size: 1rem;
+    }
+
+    .settings-group select,
+    .settings-group button {
+        width: 100%;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .setting-description {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: var(--spacing-md);
+        text-align: center;
+    }
+
+    /* Progress ring adjustments */
+    .progress-ring {
+        width: 140px; /* Increased size */
+        height: 140px;
+    }
+
+    .progress-text {
+        width: 140px;
+        height: 140px;
+        font-size: 0.9rem; /* Slightly smaller text */
+    }
+} 

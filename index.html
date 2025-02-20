@@ -21,11 +21,15 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/mobile.css">
     <link rel="stylesheet" href="css/dark-theme.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
 </head>
 <body>
     <div class="container">
         <header class="page-header">
-            <h1>Meal Calorie Tracker</h1>
+            <h1 class="desktop-only">Meal Calorie Tracker</h1>
+            <h1 class="mobile-only calculator-title">Calculator</h1>
+            <h1 class="mobile-only log-title" style="display: none;">Meal Log</h1>
+            <h1 class="mobile-only settings-title" style="display: none;">Settings</h1>
             <div class="header-controls">
                 <button id="settingsBtn" class="icon-button" aria-label="Settings">
                     <span class="material-icons">settings</span>
@@ -44,7 +48,20 @@
                     <input type="text" id="foodSearch" placeholder="Search foods...">
                     <ul id="searchResults" class="search-results"></ul>
                 </div>
-                <div class="selector-lists">
+                
+                <!-- Mobile-only selectors -->
+                <div class="mobile-selector mobile-only">
+                    <select id="mobileCategorySelect">
+                        <option value="">Select Category</option>
+                    </select>
+                    <select id="mobileFoodSelect" disabled>
+                        <option value="">Select Food</option>
+                    </select>
+                </div>
+                <div id="selectedFoodPreview" class="selected-food-preview mobile-only"></div>
+
+                <!-- Original desktop lists -->
+                <div class="selector-lists desktop-only">
                     <div class="category-list">
                         <h3>Categories</h3>
                         <ul id="categoryList"></ul>
@@ -75,6 +92,12 @@
 
         <!-- Meal Log Section -->
         <aside class="meal-log">
+            <!-- Mobile date selector -->
+            <div class="date-selector mobile-only">
+                <div class="month-label"></div>
+                <div class="date-list"></div>
+            </div>
+
             <div class="calorie-budget">
                 <div class="calorie-budget-input">
                     <label for="dailyBudget">Daily Budget:</label>
@@ -111,58 +134,46 @@
 
         <!-- Settings Page -->
         <section class="settings-page">
-            <h2>Settings</h2>
+            <h2 class="settings-title">Settings</h2>
             
             <div class="settings-group">
                 <h3>Appearance</h3>
-                <div class="setting-item">
-                    <label for="themeSelect">Theme</label>
-                    <select id="themeSelect">
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
-                        <option value="system">System Default</option>
-                    </select>
-                </div>
+                <select id="themeSelect">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="system">System Default</option>
+                </select>
+                <p class="setting-description">Theme</p>
+            </div>
+
+            <div class="settings-group">
+                <h3>Food Database</h3>
+                <button class="btn btn-primary add-food-btn-mobile">
+                    + Add New Food Item
+                </button>
+                <p class="setting-description">
+                    Add custom foods to your database
+                </p>
             </div>
 
             <div class="settings-group">
                 <h3>Data Management</h3>
-                <div class="setting-item">
-                    <div class="setting-item-content">
-                        <button class="btn btn-primary add-food-btn-mobile">
-                            + Add New Food Item
-                        </button>
-                        <p class="setting-description">
-                            Add custom foods to your database
-                        </p>
-                    </div>
-                </div>
+                <button class="btn btn-primary" id="exportDataBtn">
+                    Export Meal Log
+                </button>
+                <p class="setting-description">
+                    Download your meal log history
+                </p>
             </div>
 
             <div class="settings-group">
                 <h3>Data Management</h3>
-                <div class="setting-item">
-                    <div class="setting-item-content">
-                        <button class="btn btn-primary" id="exportDataBtn">
-                            Export Meal Log
-                        </button>
-                        <p class="setting-description">
-                            Download your meal log history
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <h3>Data Management</h3>
-                <div class="setting-item">
-                    <button class="btn btn-danger" onclick="settingsManager.confirmClearData()">
-                        Reset to Defaults
-                    </button>
-                    <p class="setting-description">
-                        This will reset all data to default values and remove saved meals
-                    </p>
-                </div>
+                <button class="btn btn-danger" onclick="settingsManager.confirmClearData()">
+                    Reset to Defaults
+                </button>
+                <p class="setting-description">
+                    This will reset all data to default values and remove saved meals
+                </p>
             </div>
 
             <div class="settings-group mobile-only">
@@ -213,6 +224,7 @@
     <script src="js/meal-logger.js"></script>
     <script src="js/theme-manager.js"></script>
     <script src="js/settings-manager.js"></script>
+    <script src="js/mobile-handler.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html> 
